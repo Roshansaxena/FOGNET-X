@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FOGNET-X Advanced Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="background:#0d1117;color:white;font-family:Arial;text-align:center;">
+
+<h1>FOGNET-X Orchestration Dashboard</h1>
+
+<h2>Severity: <span id="severity">--</span></h2>
+<p>Risk Score: <span id="risk">--</span></p>
+<p>Allocation: <span id="allocation">--</span></p>
+
+<canvas id="riskChart" width="400" height="150"></canvas>
+<canvas id="tempChart" width="400" height="150"></canvas>
+<canvas id="gasChart" width="400" height="150"></canvas>
+
+<hr>
+<h3>Fog System</h3>
+<p>CPU: <span id="cpu"></span>% | RAM: <span id="ram"></span>%</p>
+
+<script>
+let riskChart = new Chart(document.getElementById("riskChart"), {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Risk Score', data: [], borderColor: 'red' }] }
+});
+
+let tempChart = new Chart(document.getElementById("tempChart"), {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Temperature', data: [], borderColor: 'orange' }] }
+});
+
+let gasChart = new Chart(document.getElementById("gasChart"), {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Gas Level', data: [], borderColor: 'cyan' }] }
+});
+
+async function updateDashboard() {
+    const res = await fetch("/api/data");
+    const data = await res.json();
+
+    const latest = data.latest;
+    const history = data.history;
+
+    document.getElementById("severity").innerText = latest.severity || "--";
+    document.getElementById("risk").innerText = latest.risk_score || "--";
+    document.getElementById("allocation").innerText = latest.allocation || "--";
+    document.getElementById("cpu").innerText = data.cpu;
+    document.getElementById("ram").innerText = data.ram;
+
+    let labels = [];
+    let risks = [];
+    let temps = [];
+    let gases = [];
+
+    history.forEach((row, index) => {
+        labels.push(index);
+        temps.push(row[0]);
+        gases.push(row[1]);
+        risks.push(row[2]);
+    });
+
+    riskChart.data.labels = labels;
+    riskChart.data.datasets[0].data = risks;
+    riskChart.update();
+
+    tempChart.data.labels = labels;
+    tempChart.data.datasets[0].data = temps;
+    tempChart.update();
+
+    gasChart.data.labels = labels;
+    gasChart.data.datasets[0].data = gases;
+    gasChart.update();
+}
+
+setInterval(updateDashboard, 2000);
+window.onload = updateDashboard;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+
+# Database (we will snapshot separately)
+*.db-wal
+*.db-shm
+
+# OS
+.DS_Store
