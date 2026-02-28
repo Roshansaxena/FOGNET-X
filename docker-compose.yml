@@ -1,27 +1,25 @@
-version: "3.8"
-
 services:
-
-  mqtt:
-    image: eclipse-mosquitto
-    ports:
-      - "1883:1883"
-
-  cloud:
-    build:
-      context: .
-      dockerfile: Dockerfile.cloud
-    ports:
-      - "8000:8000"
-
-  fog:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - mqtt
-      - cloud
+  backend:
+    build: ./backend
+    container_name: fognetx-backend
+    volumes:
+      - sqlite_data:/app
+    env_file:
+      - ./backend/.env
     environment:
-      - PYTHONUNBUFFERED=1
+      - FRONTEND_URL=http://localhost:3000
+      - PREFERRED_URL_SCHEME=http
+      - SERVER_NAME=localhost:3000
+    expose:
+      - "8000"
+
+  frontend:
+    build: ./frontend
+    container_name: fognetx-frontend
+    depends_on:
+      - backend
     ports:
-      - "5000:5000"
+      - "3000:80"
+
+volumes:
+  sqlite_data:

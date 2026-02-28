@@ -11,7 +11,7 @@ export default function Login({ setToken }) {
   async function handleLogin(e) {
     e.preventDefault();
 
-    const res = await fetch("http://localhost:8000/api/login", {
+    const res = await fetch("api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
@@ -30,8 +30,8 @@ export default function Login({ setToken }) {
   }
 
   function handleGoogleLogin() {
-    window.location.href = "http://localhost:8000/login/google";
-  }
+  window.location.href = "/google_login";
+}
 
   return (
     <div className="auth-container">

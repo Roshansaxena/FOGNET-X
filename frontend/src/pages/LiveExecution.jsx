@@ -6,7 +6,7 @@ export default function LiveExecution() {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const res = await axios.get("http://localhost:8000/api/dashboard", {
+      const res = await axios.get("/api/dashboard", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

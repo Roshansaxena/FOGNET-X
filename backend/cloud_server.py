@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify, redirect, url_for, render_template_string
 from flask_cors import CORS
 from flask_dance.contrib.google import make_google_blueprint, google
@@ -15,25 +16,33 @@ from flask_socketio import SocketIO
 from core.config import DB_NAME
 from dotenv import load_dotenv
 import os
-
 load_dotenv()
 import sqlite3
 import pandas as pd
 import psutil
 import datetime
 import time
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # ==========================================================
 # APP INIT
 # ==========================================================
 
 app = Flask(__name__)
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+# CORS(app)
+# socketio = SocketIO(app, cors_allowed_origins="*")
 init_socketio(socketio)
 init_db()
 config = OrchestrationConfig()
+import os
 
+app.config["SERVER_NAME"] = os.getenv("SERVER_NAME")
+app.config["PREFERRED_URL_SCHEME"] = os.getenv("PREFERRED_URL_SCHEME", "http")
 app.secret_key = "fognetx-secret-key"
 
 app.config["JWT_SECRET_KEY"] = "oloawotezdzvvwvykqtnqajixciuitkb"
@@ -55,7 +64,7 @@ google_bp = make_google_blueprint(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     scope=["profile", "email"],
-    redirect_url="/google_login"
+    # redirect_url="/google_login"
 )
 @app.route("/google_login")
 def google_login():
@@ -100,7 +109,10 @@ def google_login():
     )
 
     # redirect back to frontend with token
-    return redirect(f"http://localhost:5173/oauth-success?token={token}")
+
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    return redirect(f"{frontend_url}/oauth-success?token={token}")
 app.register_blueprint(google_bp, url_prefix="/login")
 
 # ==========================================================
@@ -422,9 +434,11 @@ def get_logs():
         return jsonify(lines)
     except Exception as e:
         return jsonify({"error": "Failed to read logs"}), 500
+    from migrate import run_migrations
 # ==========================================================
 # RUN
 # ==========================================================
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8000)
+    from migrate import run_migrations
+    socketio.run(app, host="0.0.0.0", port=8000, allow_unsafe_werkzeug=True)

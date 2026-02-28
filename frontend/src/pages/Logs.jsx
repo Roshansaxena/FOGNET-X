@@ -6,7 +6,7 @@ export default function Logs() {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      const res = await axios.get("http://localhost:8000/api/logs", {
+      const res = await axios.get("api/logs", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`
         }

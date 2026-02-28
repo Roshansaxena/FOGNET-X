@@ -18,7 +18,7 @@ export default function Orchestration() {
   const fetchState = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:8000/api/orchestration/state",
+        "api/orchestration/state",
         { headers }
       );
       setState(res.data);
@@ -33,7 +33,7 @@ export default function Orchestration() {
   const fetchRecent = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:8000/api/orchestration/recent",
+        "api/orchestration/recent",
         { headers }
       );
       setRecent(res.data);
@@ -49,7 +49,7 @@ export default function Orchestration() {
   const updateConfig = async () => {
     try {
       await axios.post(
-        "http://localhost:8000/api/orchestration/config",
+        "api/orchestration/config",
         {
           mode: state.mode,
           risk_threshold: state.risk_threshold,
