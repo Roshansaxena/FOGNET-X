@@ -47,9 +47,9 @@ decision_engine = DecisionEngine()
 orchestrator = Orchestrator()
 config = OrchestrationConfig()
 
-init_db()
+# init_db()
 
-BROKER = "localhost"
+BROKER = "mqtt"
 PORT = 1883
 
 SENSOR_TOPIC = "fognetx/sensors"
@@ -72,7 +72,7 @@ def send_to_cloud_async(data, event_id):
         cloud_start = time.perf_counter()
 
         response = requests.post(
-            "http://localhost:8000/cloud/process",
+            "http://backend:8000/cloud/process",
             json=data,
             timeout=1.5
         )

@@ -1,17 +1,32 @@
 services:
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: fognetx-mqtt
+    ports:
+      - "1883:1883"
+
+  fogcore:
+    build: ./backend
+    container_name: fognetx-fogcore
+    depends_on:
+      - mqtt
+    volumes:
+      - sqlite_data:/app
+    command: [ "python", "-m", "services.mqtt_service" ]
+
   backend:
     build: ./backend
     container_name: fognetx-backend
+    depends_on:
+      - mqtt
     volumes:
       - sqlite_data:/app
     env_file:
       - ./backend/.env
-    environment:
-      - FRONTEND_URL=http://localhost:3000
-      - PREFERRED_URL_SCHEME=http
-      - SERVER_NAME=localhost:3000
     expose:
       - "8000"
+    command: ["sh", "-c", "python migrate.py && python cloud_server.py"]
 
   frontend:
     build: ./frontend
