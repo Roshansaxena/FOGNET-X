@@ -3,7 +3,7 @@ import time
 import json
 import paho.mqtt.client as mqtt
 
-BROKER = "localhost"
+BROKER = "host.docker.internal"
 TOPIC = "fognetx/sensors"
 
 client = mqtt.Client()

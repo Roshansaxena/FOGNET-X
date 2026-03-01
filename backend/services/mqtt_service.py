@@ -263,23 +263,30 @@ def system_monitor():
 
 
 # =====================================================
-# MQTT CLIENT SETUP
+# MQTT CLIENT SETUP (ASYNC VERSION)
 # =====================================================
 
-client = mqtt.Client()
+client = mqtt.Client(protocol=mqtt.MQTTv311)
 client.on_message = on_message
-while True:
-    try:
-        client.connect(BROKER, PORT)
-        break
-    except Exception:
-        print("MQTT broker not available. Retrying in 3s...")
-        time.sleep(3)
-client.subscribe(SENSOR_TOPIC)
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("✅ Connected to MQTT broker")
+        client.subscribe(SENSOR_TOPIC)
+    else:
+        print("❌ Failed to connect, return code:", rc)
+
+client.on_connect = on_connect
+client.enable_logger()
+
+client.connect_async(BROKER, PORT)
+client.loop_start()
 
 threading.Thread(target=health_monitor, daemon=True).start()
 threading.Thread(target=system_monitor, daemon=True).start()
 
 print("✅ FOGNET-X Fog Core Running...")
 print("Fog using DB:", DB_NAME)
-client.loop_forever()
+while True:
+    time.sleep(1)
+# Remove loop_forever()

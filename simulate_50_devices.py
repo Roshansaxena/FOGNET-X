@@ -4,7 +4,7 @@ import json
 import threading
 import paho.mqtt.client as mqtt
 
-BROKER = "localhost"
+BROKER = "host.docker.internal"
 TOPIC = "fognetx/sensors"
 
 client = mqtt.Client()
