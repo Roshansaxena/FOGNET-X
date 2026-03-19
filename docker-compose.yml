@@ -73,8 +73,8 @@ services:
       - DB_PATH=/data/fognetx.db
     env_file:
       - ./backend/.env
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     command: ["sh", "-c", "python migrate.py && python cloud_server.py"]
 
   frontend:
