@@ -11,14 +11,15 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
-    "axios": "^1.13.5",
-    "framer-motion": "^12.34.3",
+    "axios": "^1.13.6",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
+    "react-countup": "^6.5.3",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.1",
-    "recharts": "^3.7.0",
+    "recharts": "^3.8.0",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {

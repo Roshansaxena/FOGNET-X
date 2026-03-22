@@ -257,6 +257,7 @@ export default function Orchestration() {
 
     <div className="card">
       <h3>Recent Decisions</h3>
+      <div className="table-container">
       <table className="decision-table">
         <thead>
           <tr>
@@ -291,7 +292,7 @@ export default function Orchestration() {
         </tbody>
       </table>
     </div>
-
+</div>
   </div>
 );
 }

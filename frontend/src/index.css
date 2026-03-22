@@ -96,3 +96,46 @@ body {
   padding: 20px;
   border-radius: 10px;
 }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl transition-all duration-300;
+  }
+
+  /* --- ADD THESE THREE CLASSES BELOW --- */
+  .auth-input {
+    @apply w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white 
+           placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all;
+  }
+
+  .btn-gradient {
+    @apply w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl 
+           shadow-lg shadow-blue-900/20 active:scale-95 transition-all disabled:opacity-50;
+  }
+
+  .auth-container {
+    @apply min-h-screen w-full flex items-center justify-center bg-[#0a0f1d] p-4;
+  }
+  /* -------------------------------------- */
+
+  .metric-card {
+    @apply glass-card p-6 flex flex-col justify-between hover:border-blue-500/50 hover:bg-slate-800/60;
+  }
+
+  .heading-primary {
+    @apply text-3xl font-extrabold tracking-tight text-white mb-8;
+  }
+
+  .status-badge {
+    @apply px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tighter;
+  }
+}
+
+body {
+  @apply bg-[#0a0f1d] text-slate-200 overflow-x-hidden;
+  background-image: radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+}

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import logo from "../assets/logo.png";
 import logo from "../assets/fognetx-logo.svg";
 
 export default function Login({ setToken }) {
@@ -11,7 +10,7 @@ export default function Login({ setToken }) {
   async function handleLogin(e) {
     e.preventDefault();
 
-    const res = await fetch("api/login", {
+    const res = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
@@ -80,7 +79,12 @@ export default function Login({ setToken }) {
               Login
             </button>
           </form>
-
+<button
+  className="btn-secondary"
+  onClick={() => navigate("/register")}
+>
+  Create Account
+</button>
           <div className="divider">
             <span>OR</span>
           </div>

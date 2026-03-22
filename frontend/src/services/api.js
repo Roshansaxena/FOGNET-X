@@ -1,33 +1,47 @@
-// const BASE_URL = "";
-//
-// export async function fetchDashboard() {
-//   const token = localStorage.getItem("token");
-//
-//   const res = await fetch(`${BASE_URL}/api/dashboard`, {
-//     headers: {
-//       "Authorization": `Bearer ${token}`
-//     }
-//   });
-//
-//   if (!res.ok) {
-//     throw new Error("Failed to fetch dashboard data");
-//   }
-//
-//   return res.json();
-// }
-
 export async function fetchDashboard() {
   const token = localStorage.getItem("token");
 
   const res = await fetch(`/api/dashboard`, {
     headers: {
-      "Authorization": `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   });
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch dashboard data");
-  }
+  const data = await res.json();
 
-  return res.json();
+  if (!res.ok) throw new Error(data.msg);
+
+  return data;
+}
+
+export async function registerUser(data) {
+  const res = await fetch(`/api/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) throw new Error(result.msg);
+
+  return result;
+}
+
+export async function loginUser(data) {
+  const res = await fetch(`/api/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) throw new Error(result.msg);
+
+  return result;
 }
