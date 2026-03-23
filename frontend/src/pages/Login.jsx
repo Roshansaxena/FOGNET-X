@@ -33,73 +33,76 @@ export default function Login({ setToken }) {
 }
 
   return (
-    <div className="auth-container">
+  <div className="auth-container">
 
-      {/* LEFT PANEL */}
-      <div className="auth-left">
-        <div className="auth-brand">
-          <div className="logo-stack">
-          <img src={logo} alt="FOGNET-X Logo" className="logo" />
-          <h1>FOGNET-X</h1>
-          </div>
-          <p>Fog-Cloud Orchestration Platform</p>
+    {/* LEFT SIDE */}
+    <div className="auth-left">
+      <div className="auth-brand">
+        <img src={logo} alt="FOGNET-X Logo" className="logo" />
+        <h1>FOGNET-X</h1>
+        <p>Fog-Cloud Orchestration Platform</p>
 
-          <div className="auth-tagline">
-            <h2>Orchestrate Smarter.</h2>
-            <h2>Execute Faster.</h2>
-            <h2>Deploy Anywhere.</h2>
-          </div>
+        <div className="auth-tagline">
+          <h2>Orchestrate Smarter.</h2>
+          <h2>Execute Faster.</h2>
+          <h2>Deploy Anywhere.</h2>
         </div>
       </div>
+    </div>
 
-      {/* RIGHT PANEL */}
-      <div className="auth-right">
-        <div className="auth-card">
-          <h2>Welcome Back</h2>
-          <p className="auth-sub">Sign in to your orchestration console</p>
+    {/* RIGHT SIDE */}
+    <div className="auth-right">
+      <div className="auth-card">
 
-          <form onSubmit={handleLogin} className="auth-form">
-            <input
-              type="text"
-              placeholder="Username or Email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
+        <h2>Welcome Back</h2>
+        <p className="auth-sub">
+          Sign in to your orchestration console
+        </p>
 
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+        <form onSubmit={handleLogin} className="auth-form">
+          <input
+            type="text"
+            placeholder="Username or Email"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
 
-            <button type="submit" className="btn-primary">
-              Login
-            </button>
-          </form>
-<button
-  className="btn-secondary"
-  onClick={() => navigate("/register")}
->
-  Create Account
-</button>
-          <div className="divider">
-            <span>OR</span>
-          </div>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-          <button className="btn-google" onClick={handleGoogleLogin}>
+          <button type="submit" className="btn-primary">
+            Login
+          </button>
+        </form>
+
+        <button
+          className="btn-secondary"
+          onClick={() => navigate("/register")}
+        >
+          Create Account
+        </button>
+
+        <div className="divider">
+          <span>OR</span>
+        </div>
+
+        <button className="btn-google" onClick={handleGoogleLogin}>
   <img
     src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
     alt="Google"
-    className="google-icon"
   />
   Continue with Google
 </button>
-        </div>
-      </div>
 
+      </div>
     </div>
-  );
+
+  </div>
+);
 }

@@ -109,7 +109,7 @@ export default function Orchestration() {
     <div className="card config-card">
       <div className="grid-2">
 
-        <div>
+        <div className="form-group">
           <label>Execution Mode</label>
           <select
             value={state.mode}
@@ -124,7 +124,7 @@ export default function Orchestration() {
           </select>
         </div>
 
-        <div>
+        <div className="form-group">
           <label>Risk Threshold: {state.risk_threshold}</label>
           <input
             type="range"
@@ -141,7 +141,7 @@ export default function Orchestration() {
           />
         </div>
 
-        <div>
+        <div className="form-group">
           <label>SLA Fog (ms)</label>
           <input
             type="number"
@@ -155,7 +155,7 @@ export default function Orchestration() {
           />
         </div>
 
-        <div>
+        <div className="form-group">
           <label>SLA Cloud (ms)</label>
           <input
             type="number"
@@ -184,30 +184,36 @@ export default function Orchestration() {
 
       <div className="card metric-card">
         <h3>System Health</h3>
-        <p>CPU Usage: <strong>{state.fog_cpu}%</strong></p>
-        <p>Memory Usage: <strong>{state.memory_usage}%</strong></p>
+        <div className="metric-value">
+          <p>CPU Usage</p>
+          <h2>{state.fog_cpu}%</h2>
+        </div>
+        <div className="metric-value">
+          <p>Memory Usage</p>
+          <h2>{state.memory_usage}%</h2>
+        </div>
       </div>
 
       <div className="card metric-card">
-  <h3>SLA Pressure</h3>
+        <h3>SLA Pressure</h3>
 
-  <div className="sla-bar">
-    <div
-      className={`sla-fill ${
-        state.sla_pressure > 0.2
-          ? "danger"
-          : state.sla_pressure > 0.1
-          ? "warning"
-          : "healthy"
-      }`}
-      style={{ width: `${state.sla_pressure * 100}%` }}
-    />
-  </div>
+        <div className="sla-bar">
+          <div
+            className={`sla-fill ${
+              state.sla_pressure > 0.2
+                ? "danger"
+                : state.sla_pressure > 0.1
+                ? "warning"
+                : "healthy"
+            }`}
+            style={{ width: `${state.sla_pressure * 100}%` }}
+          />
+        </div>
 
-  <p className="sla-text">
-    {(state.sla_pressure * 100).toFixed(2)}%
-  </p>
-</div>
+        <h2 className="sla-text">
+          {(state.sla_pressure * 100).toFixed(2)}%
+        </h2>
+      </div>
 
     </div>
 
@@ -216,83 +222,92 @@ export default function Orchestration() {
     {/* ========================= */}
 
     <div className="card">
-  <h3>Allocation Distribution (Last 200 Events)</h3>
+      <h3>Allocation Distribution</h3>
 
-  <div className="alloc-row">
-    <span>Fog</span>
-    <div className="alloc-bar">
-      <div
-        className="alloc-fill fog"
-        style={{ width: `${fogPercent}%` }}
-      />
-    </div>
-    <span>{fogPercent}%</span>
-  </div>
+      <div className="alloc-row">
+        <span>Fog</span>
+        <div className="alloc-bar">
+          <div
+            className="alloc-fill fog"
+            style={{ width: `${fogPercent}%` }}
+          />
+        </div>
+        <span>{fogPercent}%</span>
+      </div>
 
-  <div className="alloc-row">
-    <span>Cloud</span>
-    <div className="alloc-bar">
-      <div
-        className="alloc-fill cloud"
-        style={{ width: `${cloudPercent}%` }}
-      />
-    </div>
-    <span>{cloudPercent}%</span>
-  </div>
+      <div className="alloc-row">
+        <span>Cloud</span>
+        <div className="alloc-bar">
+          <div
+            className="alloc-fill cloud"
+            style={{ width: `${cloudPercent}%` }}
+          />
+        </div>
+        <span>{cloudPercent}%</span>
+      </div>
 
-  <div className="alloc-row">
-    <span>Hybrid</span>
-    <div className="alloc-bar">
-      <div
-        className="alloc-fill hybrid"
-        style={{ width: `${hybridPercent}%` }}
-      />
+      <div className="alloc-row">
+        <span>Hybrid</span>
+        <div className="alloc-bar">
+          <div
+            className="alloc-fill hybrid"
+            style={{ width: `${hybridPercent}%` }}
+          />
+        </div>
+        <span>{hybridPercent}%</span>
+      </div>
     </div>
-    <span>{hybridPercent}%</span>
-  </div>
-</div>
+
     {/* ========================= */}
     {/* RECENT DECISIONS */}
     {/* ========================= */}
 
     <div className="card">
       <h3>Recent Decisions</h3>
-      <div className="table-container">
-      <table className="decision-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Device</th>
-            <th>Risk</th>
-            <th>Decision</th>
-            <th>Latency</th>
-            <th>SLA</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recent.map((d, i) => (
-            <tr key={i} className={d.sla_breach ? "breach-row" : "normal-row"}>
-              <td>{d.timestamp}</td>
-              <td>{d.device_id}</td>
-              <td>{d.risk}</td>
-              <td>
-               <span className={`decision-badge ${d.decision}`}>
-                {d.decision}
-               </span>
-              </td>
-              <td>{d.latency} ms</td>
-              <td>
-                <span className={d.sla_breach ? "sla-breach" : "sla-ok"}>
-                  {d.sla_breach ? "SLA Breach" : "OK"}
-                </span>
-              </td>
-            </tr>
 
-          ))}
-        </tbody>
-      </table>
+      <div className="table-container">
+        <table className="decision-table">
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>Risk</th>
+              <th>Decision</th>
+              <th>Latency</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {recent.map((d, i) => (
+              <tr key={i}>
+                <td>{d.device_id}</td>
+
+                <td>
+                  <span className="risk-pill">
+                    {d.risk}
+                  </span>
+                </td>
+
+                <td>
+                  <span className={`decision-badge ${d.decision}`}>
+                    {d.decision}
+                  </span>
+                </td>
+
+                <td>{d.latency} ms</td>
+
+                <td>
+                  <span className={d.sla_breach ? "sla-breach" : "sla-ok"}>
+                    {d.sla_breach ? "Breach" : "OK"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
+
   </div>
 );
 }

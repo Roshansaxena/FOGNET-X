@@ -46,7 +46,17 @@ export default function Network() {
         <div>{formatted}</div>
         <div>Raw Bytes: {bandwidth.total_bytes}</div>
       </div>
+	<div className="stats">
+  <div className="card">
+    <h3>Bandwidth</h3>
+    <h2>12 Mbps</h2>
+  </div>
 
+  <div className="card">
+    <h3>Packet Loss</h3>
+    <h2>0.3%</h2>
+  </div>
+</div>				
       <h3>Traffic Allocation Distribution</h3>
 
       <ResponsiveContainer width="100%" height={300}>

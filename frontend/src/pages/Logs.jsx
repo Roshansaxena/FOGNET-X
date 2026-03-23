@@ -19,9 +19,16 @@ export default function Logs() {
   }, []);
 
   return (
-    <div className="page-container">
-      <h2>Cloud Logs</h2>
-      <pre className="logs-box">{logs.join("")}</pre>
-    </div>
+    <div className="card">
+  <h3>System Logs</h3>
+
+  <div className="log">
+    <span>[12:01:22]</span> esp1 → Fog Execution
+  </div>
+
+  <div className="log">
+    <span>[12:01:25]</span> esp3 → Cloud Execution
+  </div>
+</div>
   );
 }

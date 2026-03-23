@@ -29,7 +29,17 @@ export default function Devices() {
         <div>CPU Usage: {system.cpu}%</div>
         <div>Memory Usage: {system.memory}%</div>
       </div>
+<div className="stats">
+  <div className="card">
+    <h3>Bandwidth</h3>
+    <h2>12 Mbps</h2>
+  </div>
 
+  <div className="card">
+    <h3>Packet Loss</h3>
+    <h2>0.3%</h2>
+  </div>
+</div>
       <h3>Connected Devices</h3>
 
       {devices.map((d, i) => (
