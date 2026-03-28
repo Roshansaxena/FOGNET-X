@@ -36,7 +36,7 @@ def init_db():
                   0,
                   sla_violation
                   INTEGER,
-                  timestamp
+                  created_at
                   REAL
               )
               """)
@@ -55,7 +55,7 @@ def log_event(device_id, temp, gas, severity, risk, allocation,
     c.execute("""
         INSERT INTO events 
         (device_id, temperature, gas, severity, risk_score, allocation,
-         fog_latency, cloud_latency, bandwidth_bytes, sla_violation, timestamp)
+         fog_latency, cloud_latency, bandwidth_bytes, sla_violation, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         device_id,

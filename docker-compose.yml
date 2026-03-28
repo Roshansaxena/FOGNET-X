@@ -1,50 +1,6 @@
-#services:
-#
-#  mqtt:
-#    image: eclipse-mosquitto:2
-#    container_name: fognetx-mqtt
-#    ports:
-#      - "1883:1883"
-#
-#  fogcore:
-#    build: ./backend
-#    container_name: fognetx-fogcore
-#    depends_on:
-#      - mqtt
-#    volumes:
-#      - sqlite_data:/data
-#    command: [ "python", "-m", "services.mqtt_service" ]
-#
-#  backend:
-#    build: ./backend
-#    container_name: fognetx-backend
-#    depends_on:
-#      - mqtt
-#    volumes:
-#      - sqlite_data:/data
-#    env_file:
-#      - ./backend/.env
-#    expose:
-#      - "8000"
-#    command: ["sh", "-c", "python migrate.py && python cloud_server.py"]
-#
-#  frontend:
-#    build: ./frontend
-#    container_name: fognetx-frontend
-#    depends_on:
-#      - backend
-#    ports:
-#      - "3000:80"
-#
-#volumes:
-#  sqlite_data:
-
-
-
 version: "3.9"
 
 services:
-
   mqtt:
     image: eclipse-mosquitto:2
     container_name: fognetx-mqtt
@@ -57,9 +13,9 @@ services:
     depends_on:
       - mqtt
     volumes:
-      - sqlite_data:/data
+      - sqlite_data:/app
     environment:
-      - DB_PATH=/data/fognetx.db
+     - DB_PATH=/app/fognetx.db
     command: ["python", "-m", "services.mqtt_service"]
 
   backend:
@@ -68,9 +24,9 @@ services:
     depends_on:
       - mqtt
     volumes:
-      - sqlite_data:/data
+      - sqlite_data:/app
     environment:
-      - DB_PATH=/data/fognetx.db
+      - DB_PATH=/app/fognetx.db
     env_file:
       - ./backend/.env
     ports:
@@ -84,6 +40,10 @@ services:
       - backend
     ports:
       - "3000:80"
+    # FIX: Add volumes here to enable Hot-Reloading
+    volumes:
+      - ./frontend/src:/app/src
+      - /app/node_modules # Prevents local node_modules from conflicting
 
 volumes:
-  sqlite_data:
+  sqlite_data: # Correct syntax for named volumes

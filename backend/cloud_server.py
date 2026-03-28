@@ -41,7 +41,7 @@ init_db()
 config = OrchestrationConfig()
 import os
 
-app.config["SERVER_NAME"] = os.getenv("SERVER_NAME")
+#app.config["SERVER_NAME"] = os.getenv("SERVER_NAME")
 app.config["PREFERRED_URL_SCHEME"] = os.getenv("PREFERRED_URL_SCHEME", "http")
 app.secret_key = "fognetx-secret-key"
 
@@ -171,22 +171,26 @@ def register():
     username = data.get("username")
     password = data.get("password")
 
-    hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
+    if not username or not password:
+        return jsonify({"msg": "Missing fields"}), 400
 
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
 
     try:
+        hashed = bcrypt.generate_password_hash(password).decode("utf-8")
+
         c.execute(
             "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            (username, hashed_pw, "viewer")
+            (username, hashed, "viewer")
         )
-        conn.commit()
-    except:
-        return jsonify({"msg": "User exists"}), 400
 
-    conn.close()
-    return jsonify({"msg": "User created"})
+        conn.commit()
+        return jsonify({"msg": "User created"})
+    except sqlite3.IntegrityError:
+        return jsonify({"msg": "User already exists"}), 400
+    finally:
+        conn.close()
 # ==========================================================
 # LOGIN
 # ==========================================================
