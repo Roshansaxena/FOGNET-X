@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import OAuthSuccess from "./pages/OAuthSuccess";
 import LiveExecution from "./pages/LiveExecution";
 import Register from "./pages/Register";
+import Landing from "./pages/Landing";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -25,6 +26,7 @@ function App() {
     <Routes>
 
       {/* Public routes */}
+      <Route path="/" element={<Landing />} />
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login setToken={setToken} />} />
       <Route path="/oauth-success" element={<OAuthSuccess setToken={setToken} />} />
@@ -43,17 +45,9 @@ function App() {
         <Route path="/network" element={<Network />} />
         <Route path="/devices" element={<Devices />} />
         <Route path="/logs" element={<Logs />} />
-          <Route path="/live" element={<LiveExecution />} />
+        <Route path="/live" element={<LiveExecution />} />
       </Route>
 
-      {/* Default redirect */}
-      {/*<Route*/}
-      {/*  path="/"*/}
-      {/*  element={*/}
-      {/*    token ? <Navigate to="/overview" /> : <Navigate to="/login" />*/}
-      {/*  }*/}
-      {/*/>*/}
-        <Route path="/" element={<Navigate to="/login" />} />
     </Routes>
   );
 }

@@ -15,6 +15,7 @@ from services.realtime import init_socketio
 from flask_socketio import SocketIO
 from core.config import DB_NAME
 from dotenv import load_dotenv
+from migrate import ensure_extended_schema
 import os
 load_dotenv()
 import sqlite3
@@ -38,6 +39,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # socketio = SocketIO(app, cors_allowed_origins="*")
 init_socketio(socketio)
 init_db()
+ensure_extended_schema()  # Ensure all tables and columns exist on every startup
 config = OrchestrationConfig()
 import os
 
@@ -155,6 +157,9 @@ def seed_admin():
         print("ℹ️ Admin already exists")
 
     conn.close()
+
+seed_admin()
+
 # ==========================================================
 # ROOT
 # ==========================================================
@@ -248,10 +253,9 @@ def process():
     # -----------------------------
     risk = random.uniform(0, 1)
     cpu = psutil.cpu_percent()
-    sla_pressure = random.uniform(0, 1)
 
     # -----------------------------
-    # DECISION LOGIC (HYBRID ADDED)
+    # DECISION LOGIC
     # -----------------------------
     if 0.4 < risk < 0.7:
         allocation = "FOG_AND_CLOUD"
@@ -273,35 +277,8 @@ def process():
     else:
         final_latency = (fog_latency * 0.6) + (cloud_latency * 0.4)
 
-    # -----------------------------
-    # SAVE TO DATABASE
-    # -----------------------------
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-
-    c.execute("""
-        INSERT INTO events (
-            device_id,
-            fog_latency,
-            cloud_latency,
-            allocation,
-            risk_score,
-            bandwidth_bytes,
-            sla_violation
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        device_id,
-        fog_latency,
-        cloud_latency,
-        allocation,
-        risk,
-        random.randint(500, 5000),
-        1 if final_latency > 200 else 0
-    ))
-
-    conn.commit()
-    conn.close()
+    # NOTE: DB insert removed - fogcore already logged this event
+    # We just return the cloud processing result
 
     # -----------------------------
     # REALTIME EMIT
@@ -393,24 +370,55 @@ def dashboard():
             for i, row in enumerate(reversed(risk_rows))
         ]
 
-        # Devices
+        # Devices - Get latest event for each device with all sensor fields
         device_rows = conn.execute("""
-            SELECT device_id, temperature, gas, severity
+            SELECT 
+                device_id, temperature, gas, severity, risk_score,
+                humidity, pressure, light_lux, motion, sound_db,
+                vibration, air_quality_index, tank_level, flow_rate,
+                power_consumption, voltage, current_amp, device_battery,
+                signal_strength, device_cpu, device_memory, network_latency,
+                packet_loss, timestamp, allocation
             FROM events
-            GROUP BY device_id
-            ORDER BY id DESC
+            WHERE id IN (
+                SELECT MAX(id) 
+                FROM events 
+                GROUP BY device_id
+            )
+            ORDER BY timestamp DESC
             LIMIT 10
         """).fetchall()
 
-        devices = [
-            {
+        devices = []
+        for row in device_rows:
+            dev = {
                 "device_id": row[0],
                 "temperature": row[1],
                 "gas": row[2],
-                "severity": row[3]
+                "severity": row[3] or "NORMAL",
+                "risk": row[4] or 0,
+                "humidity": row[5],
+                "pressure": row[6],
+                "light_lux": row[7],
+                "motion": bool(row[8]) if row[8] is not None else None,
+                "sound_db": row[9],
+                "vibration": row[10],
+                "air_quality_index": row[11],
+                "tank_level": row[12],
+                "flow_rate": row[13],
+                "power_consumption": row[14],
+                "voltage": row[15],
+                "current": row[16],
+                "battery": row[17],
+                "signal_strength": row[18],
+                "device_cpu": row[19],
+                "device_memory": row[20],
+                "network_latency": row[21],
+                "packet_loss": row[22],
+                "timestamp": row[23],
+                "decision": row[24] or "FOG_EXECUTION"
             }
-            for row in device_rows
-        ]
+            devices.append(dev)
 
         # --------------------------------
         # P95 (must be BEFORE close)
@@ -547,16 +555,303 @@ def update_orchestration_config():
     data = request.json
     config.update(data)
     return jsonify({"status": "updated", "new_config": config.get()})
+
+# ==========================================================
+# RECENT ORCHESTRATION DECISIONS
+# ==========================================================
+
+@app.route("/api/orchestration/recent")
+@jwt_required()
+def get_recent_decisions():
+    try:
+        limit = request.args.get("limit", 20, type=int)
+        conn = sqlite3.connect(DB_NAME, timeout=5)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT timestamp, device_id, risk_score, allocation,
+                   fog_latency, sla_violation
+            FROM events
+            ORDER BY id DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+        conn.close()
+        return jsonify([
+            {
+                "timestamp": r["timestamp"],
+                "device_id": r["device_id"],
+                "risk": r["risk_score"],
+                "decision": r["allocation"],
+                "latency": r["fog_latency"],
+                "sla_breach": bool(r["sla_violation"])
+            }
+            for r in rows
+        ])
+    except Exception as e:
+        print("Recent decisions error:", e)
+        return jsonify([]), 200
 @app.route("/api/logs")
 @jwt_required()
 def get_logs():
     try:
-        with open("logs/cloud.log", "r") as f:
-            lines = f.readlines()[-100:]
-        return jsonify(lines)
+        conn = sqlite3.connect(DB_NAME, timeout=5)
+        conn.row_factory = sqlite3.Row
+        
+        # Get recent events as logs
+        cursor = conn.execute("""
+            SELECT 
+                id,
+                device_id,
+                timestamp,
+                severity as level,
+                allocation as decision,
+                risk_score as risk,
+                fog_latency as latency,
+                sla_violation,
+                temperature,
+                gas,
+                humidity,
+                pressure
+            FROM events
+            ORDER BY timestamp DESC
+            LIMIT 100
+        """)
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        logs = []
+        for row in rows:
+            # Create a log message based on the event data
+            message = f"Device {row['device_id']}: {row['decision']}"
+            if row['sla_violation']:
+                message += " (SLA VIOLATION)"
+            
+            logs.append({
+                "id": row["id"],
+                "timestamp": row["timestamp"],
+                "level": row["level"].lower() if row["level"] else "info",
+                "device_id": row["device_id"],
+                "message": message,
+                "decision": row["decision"],
+                "risk": row["risk"],
+                "latency": row["latency"],
+                "temperature": row["temperature"],
+                "gas": row["gas"]
+            })
+        
+        return jsonify(logs)
     except Exception as e:
-        return jsonify({"error": "Failed to read logs"}), 500
-    from migrate import run_migrations
+        print("Get logs error:", e)
+        return jsonify([]), 200
+
+# ==========================================================
+# DEVICE MANAGEMENT
+# ==========================================================
+
+@app.route("/api/devices")
+@jwt_required()
+def list_devices():
+    """Get all registered devices from both devices table and events"""
+    try:
+        conn = sqlite3.connect(DB_NAME, timeout=5)
+        conn.row_factory = sqlite3.Row
+        
+        # First try to get from devices table
+        try:
+            cursor = conn.execute("""
+                SELECT device_id, device_name, device_type, capabilities, 
+                       location, status, battery_level, signal_strength,
+                       cpu_usage, memory_usage, last_seen, created_at
+                FROM devices
+                ORDER BY last_seen DESC
+            """)
+            
+            rows = cursor.fetchall()
+            devices = []
+            
+            for row in rows:
+                devices.append({
+                    "device_id": row["device_id"],
+                    "device_name": row["device_name"] or row["device_id"],
+                    "device_type": row["device_type"] or "IoT Sensor",
+                    "capabilities": row["capabilities"] or "[\"temperature\", \"gas\"]",
+                    "location": row["location"] or "Factory Floor",
+                    "status": row["status"] or "online",
+                    "battery_level": row["battery_level"] or 100,
+                    "signal_strength": row["signal_strength"] or -70,
+                    "cpu_usage": row["cpu_usage"] or 0,
+                    "memory_usage": row["memory_usage"] or 0,
+                    "last_seen": row["last_seen"],
+                    "created_at": row["created_at"]
+                })
+        except sqlite3.OperationalError as e:
+            # devices table doesn't exist yet, use fallback
+            print(f"Devices table not found: {e}")
+            devices = []
+        
+        # If no devices in devices table, get from events table
+        if not devices:
+            cursor = conn.execute("""
+                SELECT 
+                    device_id,
+                    MAX(timestamp) as last_seen,
+                    AVG(device_battery) as battery_level,
+                    AVG(signal_strength) as signal_strength,
+                    AVG(device_cpu) as cpu_usage,
+                    AVG(device_memory) as memory_usage
+                FROM events
+                GROUP BY device_id
+                ORDER BY last_seen DESC
+            """)
+            
+            rows = cursor.fetchall()
+            for row in rows:
+                devices.append({
+                    "device_id": row["device_id"],
+                    "device_name": row["device_id"],
+                    "device_type": "IoT Sensor",
+                    "capabilities": "[\"temperature\", \"gas\", \"humidity\", \"pressure\"]",
+                    "location": "Factory Floor",
+                    "status": "online",
+                    "battery_level": row["battery_level"] or 100,
+                    "signal_strength": row["signal_strength"] or -70,
+                    "cpu_usage": row["cpu_usage"] or 0,
+                    "memory_usage": row["memory_usage"] or 0,
+                    "last_seen": row["last_seen"],
+                    "created_at": row["last_seen"]
+                })
+        
+        conn.close()
+        return jsonify(devices)
+    except Exception as e:
+        print("List devices error:", e)
+        return jsonify({"error": "Failed to fetch devices"}), 500
+
+
+@app.route("/api/devices", methods=["POST"])
+@jwt_required()
+def create_device():
+    """Register a new device"""
+    try:
+        data = request.json
+        device_id = data.get("device_id")
+        device_name = data.get("device_name", device_id)
+        device_type = data.get("device_type", "iot_sensor")
+        capabilities = data.get("capabilities", "[]")
+        location = data.get("location", "")
+        status = data.get("status", "offline")
+        
+        if not device_id:
+            return jsonify({"msg": "device_id required"}), 400
+        
+        conn = sqlite3.connect(DB_NAME, timeout=5)
+        c = conn.cursor()
+        
+        # Check if exists
+        c.execute("SELECT device_id FROM devices WHERE device_id = ?", (device_id,))
+        if c.fetchone():
+            conn.close()
+            return jsonify({"msg": "Device already exists"}), 400
+        
+        now = datetime.datetime.utcnow().isoformat()
+        c.execute("""
+            INSERT INTO devices (
+                device_id, device_name, device_type, capabilities,
+                location, status, battery_level, signal_strength,
+                cpu_usage, memory_usage, last_seen, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            device_id, device_name, device_type, capabilities,
+            location, status, 100, -70, 0, 0, now, now
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": f"Device {device_id} registered"})
+    except Exception as e:
+        print("Create device error:", e)
+        return jsonify({"msg": str(e)}), 400
+
+
+@app.route("/api/devices/<device_id>", methods=["PUT"])
+@jwt_required()
+def update_device(device_id):
+    """Update device information"""
+    try:
+        data = request.json
+        
+        conn = sqlite3.connect(DB_NAME, timeout=5)
+        c = conn.cursor()
+        
+        # Check if exists
+        c.execute("SELECT device_id FROM devices WHERE device_id = ?", (device_id,))
+        if not c.fetchone():
+            conn.close()
+            return jsonify({"msg": "Device not found"}), 404
+        
+        # Update fields
+        updates = []
+        values = []
+        
+        if "device_name" in data:
+            updates.append("device_name = ?")
+            values.append(data["device_name"])
+        if "device_type" in data:
+            updates.append("device_type = ?")
+            values.append(data["device_type"])
+        if "capabilities" in data:
+            updates.append("capabilities = ?")
+            values.append(data["capabilities"])
+        if "location" in data:
+            updates.append("location = ?")
+            values.append(data["location"])
+        if "status" in data:
+            updates.append("status = ?")
+            values.append(data["status"])
+        if "battery_level" in data:
+            updates.append("battery_level = ?")
+            values.append(data["battery_level"])
+        if "signal_strength" in data:
+            updates.append("signal_strength = ?")
+            values.append(data["signal_strength"])
+        
+        if updates:
+            values.append(device_id)
+            query = f"UPDATE devices SET {', '.join(updates)} WHERE device_id = ?"
+            c.execute(query, values)
+            conn.commit()
+        
+        conn.close()
+        return jsonify({"status": "success", "message": f"Device {device_id} updated"})
+    except Exception as e:
+        print("Update device error:", e)
+        return jsonify({"msg": str(e)}), 400
+
+
+@app.route("/api/devices/<device_id>", methods=["DELETE"])
+@jwt_required()
+def remove_device(device_id):
+    """Delete a device"""
+    try:
+        conn = sqlite3.connect(DB_NAME, timeout=5)
+        c = conn.cursor()
+        
+        # Check if exists
+        c.execute("SELECT device_id FROM devices WHERE device_id = ?", (device_id,))
+        if not c.fetchone():
+            conn.close()
+            return jsonify({"msg": "Device not found"}), 404
+        
+        c.execute("DELETE FROM devices WHERE device_id = ?", (device_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": f"Device {device_id} deleted"})
+    except Exception as e:
+        print("Delete device error:", e)
+        return jsonify({"msg": str(e)}), 400
+
 # ==========================================================
 # RUN
 # ==========================================================

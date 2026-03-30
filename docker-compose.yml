@@ -1,4 +1,4 @@
-version: "3.9"
+#version: "3.9"
 
 services:
   mqtt:
@@ -13,9 +13,9 @@ services:
     depends_on:
       - mqtt
     volumes:
-      - sqlite_data:/app
+      - sqlite_data:/data
     environment:
-     - DB_PATH=/app/fognetx.db
+     - DB_PATH=/data/fognetx.db
     command: ["python", "-m", "services.mqtt_service"]
 
   backend:
@@ -24,9 +24,9 @@ services:
     depends_on:
       - mqtt
     volumes:
-      - sqlite_data:/app
+      - sqlite_data:/data
     environment:
-      - DB_PATH=/app/fognetx.db
+      - DB_PATH=/data/fognetx.db
     env_file:
       - ./backend/.env
     ports:
