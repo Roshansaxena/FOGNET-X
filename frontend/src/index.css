@@ -85,3 +85,58 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* React Grid Layout Customizations */
+.react-grid-placeholder {
+  @apply bg-indigo-500/10 border-2 border-dashed border-indigo-500/30 rounded-2xl !important;
+  opacity: 0.5 !important;
+  z-index: 2 !important;
+  transition-duration: 100ms !important;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+.react-grid-item.resizing {
+  z-index: 10;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none !important;
+  z-index: 100;
+}
+
+.react-resizable-handle {
+  padding: 5px;
+}
+
+.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s;
+}
+
+.react-grid-item:hover .react-resizable-handle::after {
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.react-grid-item.resizing .react-resizable-handle::after {
+  border-color: #6366f1;
+}
+
+/* Fix for animation stuttering during drag */
+.react-grid-layout {
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, right, bottom;
+}

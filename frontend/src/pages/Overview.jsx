@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { fetchDashboard } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -38,8 +38,25 @@ import {
   Database,
   Wifi,
   Battery,
-  Signal
+  Signal,
+  GripVertical,
+  X,
+  Settings,
+  LayoutDashboard,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Lock,
+  Unlock,
+  Move,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // Professional chart colors
 const CHART_COLORS = {
@@ -54,52 +71,48 @@ const CHART_COLORS = {
 };
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444"];
-const GRADIENT_COLORS = [
-  { from: "#6366f1", to: "#8b5cf6" },
-  { from: "#10b981", to: "#34d399" },
-  { from: "#f59e0b", to: "#fbbf24" }
-];
 
-// Enhanced Metric Card with trend indicator - ULTRA COMPACT
-function MetricCard({ title, value, sub, icon: Icon, colorClass, delay = 0, trend = null }) {
-  return (
-    <motion.div
-      className="glass-card p-3 relative overflow-hidden group hover:shadow-md hover:shadow-indigo-500/10 transition-all duration-300 border border-slate-700/50"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      whileHover={{ scale: 1.01 }}
-    >
-      {/* Background gradient effect */}
-      <div className={`absolute -right-3 -top-3 w-16 h-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${colorClass.replace('text-', 'bg-')}`}></div>
-      
-      <div className="flex justify-between items-start mb-1">
-        <div className="flex items-center gap-1.5">
-          <div className={`p-1.5 rounded-md bg-gradient-to-br from-white/5 to-white/10 border border-white/10 ${colorClass}`}>
-             <Icon size={14} strokeWidth={2} />
-          </div>
-          <div>
-            <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{title}</h4>
-            {trend && (
-              <div className={`flex items-center gap-0.5 text-[9px] ${trend > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                <TrendingUp size={8} className={trend < 0 ? 'rotate-180' : ''} />
-                <span>{Math.abs(trend)}%</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      <div className="relative z-10">
-        <h2 className="text-xl font-bold text-white mb-0 tracking-tight">{value}</h2>
-        <p className="text-[9px] text-slate-500 flex items-center gap-0.5">
-          <Clock size={8} />
-          {sub}
-        </p>
-      </div>
-    </motion.div>
-  );
-}
+// Storage keys
+const LAYOUT_STORAGE_KEY = "fognet-dashboard-layout";
+const HIDDEN_WIDGETS_KEY = "fognet-dashboard-hidden";
+
+// Default layouts for different breakpoints
+const DEFAULT_LAYOUTS = {
+  lg: [
+    { i: "metrics", x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 3 },
+    { i: "sensors", x: 0, y: 3, w: 8, h: 5, minW: 4, minH: 4 },
+    { i: "health", x: 8, y: 3, w: 4, h: 5, minW: 3, minH: 4 },
+    { i: "risk", x: 0, y: 8, w: 8, h: 7, minW: 4, minH: 5 },
+    { i: "allocation", x: 8, y: 8, w: 4, h: 7, minW: 3, minH: 5 },
+    { i: "telemetry", x: 0, y: 15, w: 12, h: 4, minW: 6, minH: 3 },
+  ],
+  md: [
+    { i: "metrics", x: 0, y: 0, w: 10, h: 3, minW: 6, minH: 3 },
+    { i: "sensors", x: 0, y: 3, w: 6, h: 5, minW: 4, minH: 4 },
+    { i: "health", x: 6, y: 3, w: 4, h: 5, minW: 3, minH: 4 },
+    { i: "risk", x: 0, y: 8, w: 6, h: 7, minW: 4, minH: 5 },
+    { i: "allocation", x: 6, y: 8, w: 4, h: 7, minW: 3, minH: 5 },
+    { i: "telemetry", x: 0, y: 15, w: 10, h: 4, minW: 6, minH: 3 },
+  ],
+  sm: [
+    { i: "metrics", x: 0, y: 0, w: 6, h: 4, minW: 6, minH: 3 },
+    { i: "sensors", x: 0, y: 4, w: 6, h: 5, minW: 4, minH: 4 },
+    { i: "health", x: 0, y: 9, w: 6, h: 5, minW: 3, minH: 4 },
+    { i: "risk", x: 0, y: 14, w: 6, h: 7, minW: 4, minH: 5 },
+    { i: "allocation", x: 0, y: 21, w: 6, h: 7, minW: 3, minH: 5 },
+    { i: "telemetry", x: 0, y: 28, w: 6, h: 4, minW: 6, minH: 3 },
+  ],
+};
+
+// Widget definitions
+const WIDGET_DEFS = {
+  metrics: { title: "Key Performance Metrics", icon: Activity },
+  sensors: { title: "Live Sensor Readings", icon: Cpu },
+  health: { title: "System Health", icon: Shield },
+  risk: { title: "Risk Trajectory", icon: TrendingUp },
+  allocation: { title: "Task Distribution", icon: Gauge },
+  telemetry: { title: "Edge Node Telemetry", icon: HardDrive },
+};
 
 // Ultra-compact Sensor Data Card component
 function SensorCard({ title, value, unit, icon: Icon, status = 'normal', delay = 0 }) {
@@ -170,11 +183,62 @@ function HealthGauge({ health, label, icon: Icon, delay = 0 }) {
   );
 }
 
+// Widget wrapper with edit mode controls
+function WidgetWrapper({ id, children, isEditMode, onRemove, title, icon: Icon }) {
+  return (
+    <div className="h-full flex flex-col glass-card border border-slate-700/50 overflow-hidden relative group/widget">
+      {/* Edit mode overlay & controls */}
+      {isEditMode && (
+        <>
+          {/* Drag handle bar */}
+          <div 
+            className="drag-handle absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-1.5 bg-indigo-500/20 backdrop-blur-sm border-b border-indigo-500/30 cursor-grab active:cursor-grabbing"
+          >
+            <div className="flex items-center gap-2">
+              <GripVertical size={14} className="text-indigo-400" />
+              <span className="text-[10px] font-semibold text-indigo-300 uppercase tracking-wider">
+                {title}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemove(id); }}
+                className="p-1 rounded hover:bg-rose-500/30 text-slate-400 hover:text-rose-400 transition-colors"
+                title="Hide widget"
+              >
+                <EyeOff size={12} />
+              </button>
+            </div>
+          </div>
+          {/* Dashed outline for edit mode */}
+          <div className="absolute inset-0 border-2 border-dashed border-indigo-500/30 rounded-2xl pointer-events-none z-10" />
+        </>
+      )}
+      <div className={`flex-1 overflow-hidden ${isEditMode ? 'pt-8' : ''}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function Overview() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [hiddenWidgets, setHiddenWidgets] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(HIDDEN_WIDGETS_KEY)) || [];
+    } catch { return []; }
+  });
+  const [layouts, setLayouts] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY));
+      return saved || DEFAULT_LAYOUTS;
+    } catch { return DEFAULT_LAYOUTS; }
+  });
+  const [showWidgetPanel, setShowWidgetPanel] = useState(false);
+
   useEffect(() => {
     const load = () => {
       fetchDashboard()
@@ -190,9 +254,46 @@ export default function Overview() {
     };
 
     load(); 
-    const interval = setInterval(load, 3000); // Faster updates for real-time feel
+    const interval = setInterval(load, 3000);
     return () => clearInterval(interval); 
   }, []);
+
+  const onLayoutChange = useCallback((currentLayout, allLayouts) => {
+    setLayouts(allLayouts);
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(allLayouts));
+  }, []);
+
+  const removeWidget = useCallback((widgetId) => {
+    setHiddenWidgets(prev => {
+      const updated = [...prev, widgetId];
+      localStorage.setItem(HIDDEN_WIDGETS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const restoreWidget = useCallback((widgetId) => {
+    setHiddenWidgets(prev => {
+      const updated = prev.filter(id => id !== widgetId);
+      localStorage.setItem(HIDDEN_WIDGETS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const resetLayout = useCallback(() => {
+    setLayouts(DEFAULT_LAYOUTS);
+    setHiddenWidgets([]);
+    localStorage.removeItem(LAYOUT_STORAGE_KEY);
+    localStorage.removeItem(HIDDEN_WIDGETS_KEY);
+  }, []);
+
+  // Filter layouts to only include visible widgets
+  const filteredLayouts = useMemo(() => {
+    const result = {};
+    for (const [breakpoint, items] of Object.entries(layouts)) {
+      result[breakpoint] = items.filter(item => !hiddenWidgets.includes(item.i));
+    }
+    return result;
+  }, [layouts, hiddenWidgets]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-full min-h-[600px]">
@@ -219,401 +320,373 @@ export default function Overview() {
   ];
   
   const totalAllocations = allocationData.reduce((sum, item) => sum + item.value, 0);
-  
-  // Get latest device data (first device in array or empty object)
   const latestDevice = data.devices?.[0] || {};
-  
-  // Health scores (simulated from system data)
   const deviceHealth = data.system?.health_score || 95;
   const networkQuality = data.system?.network_quality || 88;
   const slaCompliance = data.sla_compliance || 99;
 
+  // Visible widget IDs
+  const visibleWidgetIds = Object.keys(WIDGET_DEFS).filter(id => !hiddenWidgets.includes(id));
+
   return (
-    <div className="max-w-[1600px] mx-auto space-y-4">
-      {/* Compact Header Section */}
-      <motion.div 
-        className="glass-card p-4 border border-slate-700/50 relative overflow-hidden"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl"></div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/30">
-                <Activity size={20} className="text-indigo-400" />
-              </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">FOGNET-X Dashboard</h1>
-            </div>
-            <p className="text-xs text-slate-400 ml-0.5">Real-time edge orchestration</p>
+    <div className="max-w-[1600px] mx-auto">
+      {/* Dashboard Header with Controls */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard size={20} className="text-indigo-400" />
+            <h1 className="text-lg font-bold text-white">Dashboard</h1>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Last Update</div>
-              <div className="text-xs text-white font-mono">{lastUpdate.toLocaleTimeString()}</div>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-              <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wide">Live</span>
-            </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+            <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wide">Live</span>
           </div>
+          <span className="text-xs text-slate-500 font-mono">{lastUpdate.toLocaleTimeString()}</span>
         </div>
-      </motion.div>
 
-      {/* Key Performance Metrics - Compact */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <MetricCard
-          title="Total Events"
-          value={data.total_events?.toLocaleString() || 0}
-          sub="Processed events"
-          icon={Activity}
-          colorClass="text-blue-400"
-          delay={0}
-          trend={12}
-        />
-        <MetricCard
-          title="Fog Latency"
-          value={`${data.avg_fog_latency || 0}`}
-          sub={`P95: ${data.p95_fog_latency || 0}ms`}
-          icon={Zap}
-          colorClass="text-emerald-400"
-          delay={0.1}
-          trend={-8}
-        />
-        <MetricCard
-          title="Cloud Latency"
-          value={`${data.avg_cloud_latency || 0}`}
-          sub={`P95: ${data.p95_cloud_latency || 0}ms`}
-          icon={Server}
-          colorClass="text-indigo-400"
-          delay={0.2}
-        />
-        <MetricCard
-          title="SLA Compliance"
-          value={`${slaCompliance}%`}
-          sub={`${data.sla_violations || 0} violations`}
-          icon={Shield}
-          colorClass={slaCompliance > 95 ? "text-emerald-400" : "text-amber-400"}
-          delay={0.3}
-          trend={slaCompliance > 95 ? 2 : -5}
-        />
-        <MetricCard
-          title="Bandwidth"
-          value={data.formatted_bandwidth || "0 KB"}
-          sub="Cloud traffic"
-          icon={Network}
-          colorClass="text-purple-400"
-          delay={0.4}
-        />
-      </div>
-
-      {/* Sensor Data & Device Health - Compact */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Live Sensor Readings */}
-        <motion.div 
-          className="lg:col-span-2 glass-card p-3 border border-slate-700/50 h-auto"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
-              <Cpu size={14} className="text-indigo-400" />
-              Live Sensor Readings
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse ml-1" />
-            </h3>
-            <div className="text-[9px] text-slate-500">{lastUpdate.toLocaleTimeString()}</div>
-          </div>
-          
-          {data.devices?.length > 0 ? (
-            <div className="grid grid-cols-4 gap-1.5">
-              <SensorCard
-                title="Temp"
-                value={latestDevice.temperature}
-                unit="°C"
-                icon={Thermometer}
-                status={latestDevice.temperature > 50 ? 'critical' : latestDevice.temperature > 40 ? 'warning' : 'normal'}
-                delay={0.3}
-              />
-              <SensorCard
-                title="Humidity"
-                value={latestDevice.humidity}
-                unit="%"
-                icon={Droplets}
-                status="normal"
-                delay={0.4}
-              />
-              <SensorCard
-                title="Gas"
-                value={latestDevice.gas}
-                unit="ppm"
-                icon={Wind}
-                status={latestDevice.gas > 500 ? 'critical' : latestDevice.gas > 300 ? 'warning' : 'normal'}
-                delay={0.5}
-              />
-              <SensorCard
-                title="Pressure"
-                value={latestDevice.pressure}
-                unit="hPa"
-                icon={Gauge}
-                status="normal"
-                delay={0.6}
-              />
-              <SensorCard
-                title="Tank"
-                value={latestDevice.tank_level ? Math.round(latestDevice.tank_level) : null}
-                unit="%"
-                icon={Database}
-                status={latestDevice.tank_level > 95 ? 'critical' : latestDevice.tank_level > 80 ? 'warning' : 'normal'}
-                delay={0.7}
-              />
-              <SensorCard
-                title="Motion"
-                value={latestDevice.motion ? 'ON' : 'OFF'}
-                unit=""
-                icon={Activity}
-                status={latestDevice.motion ? 'warning' : 'normal'}
-                delay={0.8}
-              />
-              <SensorCard
-                title="Power"
-                value={latestDevice.power_consumption}
-                unit="W"
-                icon={Zap}
-                status="normal"
-                delay={0.9}
-              />
-              <SensorCard
-                title="Network"
-                value={latestDevice.network_latency ? Math.round(latestDevice.network_latency) : null}
-                unit="ms"
-                icon={Wifi}
-                status={latestDevice.network_latency > 100 ? 'warning' : 'normal'}
-                delay={1.0}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8 text-slate-500 text-sm">
-              <Activity className="w-4 h-4 mr-2 animate-pulse" />
-              Waiting for sensor data...
-            </div>
-          )}
-        </motion.div>
-        
-        {/* Device & Network Health - Compact */}
-        <motion.div 
-          className="glass-card p-4 border border-slate-700/50"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <Shield size={16} className="text-emerald-400" />
-              System Health
-            </h3>
-          </div>
-          
-          <div className="space-y-2">
-            <HealthGauge
-              health={deviceHealth}
-              label="Device"
-              icon={Cpu}
-              delay={0.4}
-            />
-            <HealthGauge
-              health={networkQuality}
-              label="Network"
-              icon={Wifi}
-              delay={0.5}
-            />
-            <HealthGauge
-              health={slaCompliance}
-              label="SLA"
-              icon={CheckCircle}
-              delay={0.6}
-            />
-          </div>
-        </motion.div>
-      </div>
-
-      {/* MAIN CHARTS - Compact */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        
-        {/* Risk Trend Chart */}
-        <motion.div 
-          className="lg:col-span-2 glass-card p-4"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="flex justify-between items-center mb-3">
-             <div>
-                <h3 className="text-sm font-semibold text-white">Risk Trajectory</h3>
-                <span className="text-[10px] text-slate-400">Last 20 windows</span>
-             </div>
-             <div className="flex gap-2">
-                <span className="px-2 py-1 bg-white/5 rounded text-[10px] text-slate-300 border border-white/10">Live</span>
-             </div>
-          </div>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.risk_trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis 
-                  dataKey="index" 
-                  tick={{ fill: "#64748b", fontSize: 12 }} 
-                  axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                  tickLine={false}
-                />
-                <YAxis 
-                  tick={{ fill: "#64748b", fontSize: 12 }} 
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px border rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="risk_score" 
-                  stroke="#8b5cf6" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorRisk)" 
-                  activeDot={{ r: 6, strokeWidth: 0, fill: '#c084fc' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
-        {/* Allocation Donut Chart - Compact */}
-        <motion.div 
-          className="glass-card p-4 flex flex-col"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <div className="mb-2">
-            <h3 className="text-sm font-bold text-white">Task Distribution</h3>
-            <p className="text-[10px] text-slate-400">Fog vs Cloud</p>
-          </div>
-          <div className="flex-1 min-h-[180px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  <linearGradient id="fogGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#34d399" stopOpacity={1}/>
-                  </linearGradient>
-                  <linearGradient id="cloudGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#60a5fa" stopOpacity={1}/>
-                  </linearGradient>
-                  <linearGradient id="hybridGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#fbbf24" stopOpacity={1}/>
-                  </linearGradient>
-                </defs>
-                <Pie
-                  data={allocationData}
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={65}
-                  paddingAngle={3}
-                  stroke="none"
+        <div className="flex items-center gap-2">
+          {isEditMode && (
+            <>
+              {/* Widget visibility toggle */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowWidgetPanel(!showWidgetPanel)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors text-xs font-medium"
                 >
-                  {allocationData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={`url(${index === 0 ? '#fogGradient' : index === 1 ? '#cloudGradient' : '#hybridGradient'})`} />
+                  <Eye size={14} />
+                  Widgets
+                </button>
+
+                {/* Widget panel dropdown */}
+                <AnimatePresence>
+                  {showWidgetPanel && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-2 w-64 bg-slate-800/95 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl z-50 p-3"
+                    >
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 px-1">Toggle Widgets</div>
+                      <div className="space-y-1">
+                        {Object.entries(WIDGET_DEFS).map(([id, def]) => {
+                          const isVisible = !hiddenWidgets.includes(id);
+                          const WidgetIcon = def.icon;
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => isVisible ? removeWidget(id) : restoreWidget(id)}
+                              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                                isVisible 
+                                  ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/20' 
+                                  : 'bg-slate-700/30 text-slate-500 border border-slate-700/30 hover:text-slate-300'
+                              }`}
+                            >
+                              <WidgetIcon size={14} />
+                              <span className="flex-1 text-left">{def.title}</span>
+                              {isVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Reset button */}
+              <button
+                onClick={resetLayout}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 hover:bg-amber-500/20 transition-colors text-xs font-medium"
+                title="Reset to default layout"
+              >
+                <RotateCcw size={14} />
+                Reset
+              </button>
+            </>
+          )}
+
+          {/* Edit mode toggle */}
+          <button
+            onClick={() => { setIsEditMode(!isEditMode); setShowWidgetPanel(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              isEditMode 
+                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' 
+                : 'bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            {isEditMode ? <><Lock size={14} /> Lock Dashboard</> : <><Settings size={14} /> Customize</>}
+          </button>
+        </div>
+      </div>
+
+      {/* Edit Mode Banner */}
+      <AnimatePresence>
+        {isEditMode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-3 overflow-hidden"
+          >
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+              <Move size={16} className="text-indigo-400" />
+              <span className="text-xs text-indigo-300">
+                <strong>Edit Mode:</strong> Drag widgets to rearrange • Resize from edges/corners • Click <EyeOff size={10} className="inline" /> to hide widgets
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Customizable Grid Layout */}
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={filteredLayouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768 }}
+        cols={{ lg: 12, md: 10, sm: 6 }}
+        rowHeight={40}
+        onLayoutChange={onLayoutChange}
+        isDraggable={isEditMode}
+        isResizable={isEditMode}
+        draggableHandle=".drag-handle"
+        containerPadding={[0, 0]}
+        margin={[12, 12]}
+        useCSSTransforms={true}
+      >
+        {/* Key Performance Metrics */}
+        {!hiddenWidgets.includes("metrics") && (
+          <div key="metrics">
+            <WidgetWrapper id="metrics" isEditMode={isEditMode} onRemove={removeWidget} title="Key Metrics" icon={Activity}>
+              <div className="p-3 h-full">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 h-full">
+                  {[
+                    { title: "Total Events", value: data.total_events?.toLocaleString() || 0, sub: "Processed events", icon: Activity, color: "text-blue-400", trend: 12 },
+                    { title: "Fog Latency", value: `${data.avg_fog_latency || 0}`, sub: `P95: ${data.p95_fog_latency || 0}ms`, icon: Zap, color: "text-emerald-400", trend: -8 },
+                    { title: "Cloud Latency", value: `${data.avg_cloud_latency || 0}`, sub: `P95: ${data.p95_cloud_latency || 0}ms`, icon: Server, color: "text-indigo-400" },
+                    { title: "SLA Compliance", value: `${slaCompliance}%`, sub: `${data.sla_violations || 0} violations`, icon: Shield, color: slaCompliance > 95 ? "text-emerald-400" : "text-amber-400", trend: slaCompliance > 95 ? 2 : -5 },
+                    { title: "Bandwidth", value: data.formatted_bandwidth || "0 KB", sub: "Cloud traffic", icon: Network, color: "text-purple-400" }
+                  ].map((m, i) => (
+                    <div key={i} className="glass-card p-3 relative overflow-hidden group border border-slate-700/50 hover:shadow-md hover:shadow-indigo-500/10 transition-all">
+                      <div className={`absolute -right-3 -top-3 w-16 h-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${m.color.replace('text-', 'bg-')}`}></div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className={`p-1.5 rounded-md bg-gradient-to-br from-white/5 to-white/10 border border-white/10 ${m.color}`}>
+                          <m.icon size={14} strokeWidth={2} />
+                        </div>
+                        <div>
+                          <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{m.title}</h4>
+                          {m.trend && (
+                            <div className={`flex items-center gap-0.5 text-[9px] ${m.trend > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              <TrendingUp size={8} className={m.trend < 0 ? 'rotate-180' : ''} />
+                              <span>{Math.abs(m.trend)}%</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <h2 className="text-xl font-bold text-white mb-0 tracking-tight">{m.value}</h2>
+                      <p className="text-[9px] text-slate-500 flex items-center gap-0.5"><Clock size={8} />{m.sub}</p>
+                    </div>
                   ))}
-                </Pie>
-                <RechartsTooltip 
-                   contentStyle={{ 
-                     backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                     border: '1px solid rgba(255,255,255,0.1)', 
-                     borderRadius: '8px',
-                     backdropFilter: 'blur(8px)',
-                     fontSize: '12px'
-                   }}
-                   itemStyle={{ color: '#fff', fontSize: '12px' }}
-                />
-                {/* Center text */}
-                <text x="50%" y="50%" textAnchor="middle" className="fill-white text-xl font-bold" style={{ fontSize: '20px' }}>
-                  {totalAllocations}
-                </text>
-                <text x="50%" y="60%" textAnchor="middle" className="fill-slate-400 text-[10px]" style={{ fontSize: '10px' }}>
-                  Tasks
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          
-          {/* Legend - Compact */}
-          <div className="mt-2 space-y-1">
-            {allocationData.map((item, index) => (
-              <div key={item.name} className="flex justify-between items-center text-xs">
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full ${index === 0 ? 'bg-emerald-500' : index === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
-                  <span className="text-slate-300 text-[10px]">{item.name}</span>
-                </div>
-                <div className="text-xs font-semibold text-white">
-                  {item.value}
                 </div>
               </div>
-            ))}
+            </WidgetWrapper>
           </div>
-        </motion.div>
+        )}
 
-      </div>
+        {/* Live Sensor Readings */}
+        {!hiddenWidgets.includes("sensors") && (
+          <div key="sensors">
+            <WidgetWrapper id="sensors" isEditMode={isEditMode} onRemove={removeWidget} title="Sensor Readings" icon={Cpu}>
+              <div className="p-3 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Cpu size={14} className="text-indigo-400" />
+                    Live Sensor Readings
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse ml-1" />
+                  </h3>
+                  <div className="text-[9px] text-slate-500">{lastUpdate.toLocaleTimeString()}</div>
+                </div>
+                {data.devices?.length > 0 ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 flex-1 content-start">
+                    <SensorCard title="Temp" value={parseFloat(latestDevice.temperature || 0).toFixed(1)} unit="°C" icon={Thermometer}
+                      status={latestDevice.temperature > 50 ? 'critical' : latestDevice.temperature > 40 ? 'warning' : 'normal'} delay={0.1} />
+                    <SensorCard title="Humidity" value={parseFloat(latestDevice.humidity || 0).toFixed(1)} unit="%" icon={Droplets} status="normal" delay={0.15} />
+                    <SensorCard title="Gas" value={parseFloat(latestDevice.gas || 0).toFixed(1)} unit="ppm" icon={Wind}
+                      status={latestDevice.gas > 500 ? 'critical' : latestDevice.gas > 300 ? 'warning' : 'normal'} delay={0.2} />
+                    <SensorCard title="Pressure" value={parseFloat(latestDevice.pressure || 0).toFixed(1)} unit="hPa" icon={Gauge} status="normal" delay={0.25} />
+                    <SensorCard title="Tank" value={latestDevice.tank_level ? parseFloat(latestDevice.tank_level).toFixed(1) : null} unit="%"
+                      icon={Database} status={latestDevice.tank_level > 95 ? 'critical' : latestDevice.tank_level > 80 ? 'warning' : 'normal'} delay={0.3} />
+                    <SensorCard title="Motion" value={latestDevice.motion ? 'ON' : 'OFF'} unit="" icon={Activity}
+                      status={latestDevice.motion ? 'warning' : 'normal'} delay={0.35} />
+                    <SensorCard title="Power" value={parseFloat(latestDevice.power_consumption || 0).toFixed(1)} unit="W" icon={Zap} status="normal" delay={0.4} />
+                    <SensorCard title="Network" value={latestDevice.network_latency ? parseFloat(latestDevice.network_latency).toFixed(1) : null}
+                      unit="ms" icon={Wifi} status={latestDevice.network_latency > 100 ? 'warning' : 'normal'} delay={0.45} />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-8 text-slate-500 text-sm">
+                    <Activity className="w-4 h-4 mr-2 animate-pulse" />
+                    Waiting for sensor data...
+                  </div>
+                )}
+              </div>
+            </WidgetWrapper>
+          </div>
+        )}
 
-      {/* HARDWARE METRICS */}
-      <h2 className="text-xl font-bold text-white mb-4 mt-10 flex items-center gap-2">
-         <HardDrive size={22} className="text-indigo-400" /> Edge Node Telemetry
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="CPU Usage"
-          value={`${data.system?.cpu || 0}%`}
-          sub="Fog node core utilization"
-          icon={Cpu}
-          colorClass="text-amber-400"
-        />
-        <MetricCard
-          title="Memory Usage"
-          value={`${data.system?.memory || 0}%`}
-          sub="Fog node RAM allocation"
-          icon={HardDrive}
-          colorClass="text-cyan-400"
-        />
-        <MetricCard
-          title="Cloud Bytes"
-          value={`${data.bandwidth?.cloud_bytes || 0} B`}
-          sub="Egress window volume"
-          icon={Network}
-          colorClass="text-indigo-400"
-        />
-        <MetricCard
-          title="Fog Bytes"
-          value={`${data.bandwidth?.fog_bytes || 0} B`}
-          sub="Ingress window volume"
-          icon={Activity}
-          colorClass="text-emerald-400"
-        />
-      </div>
+        {/* System Health */}
+        {!hiddenWidgets.includes("health") && (
+          <div key="health">
+            <WidgetWrapper id="health" isEditMode={isEditMode} onRemove={removeWidget} title="System Health" icon={Shield}>
+              <div className="p-4 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <Shield size={16} className="text-emerald-400" />
+                    System Health
+                  </h3>
+                </div>
+                <div className="flex-1 flex flex-col justify-around">
+                  <HealthGauge health={deviceHealth} label="Device" icon={Cpu} delay={0.2} />
+                  <HealthGauge health={networkQuality} label="Network" icon={Wifi} delay={0.3} />
+                  <HealthGauge health={slaCompliance} label="SLA" icon={CheckCircle} delay={0.4} />
+                </div>
+              </div>
+            </WidgetWrapper>
+          </div>
+        )}
 
+        {/* Risk Trend Chart */}
+        {!hiddenWidgets.includes("risk") && (
+          <div key="risk">
+            <WidgetWrapper id="risk" isEditMode={isEditMode} onRemove={removeWidget} title="Risk Trajectory" icon={TrendingUp}>
+              <div className="p-4 h-full flex flex-col">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Risk Trajectory</h3>
+                    <span className="text-[10px] text-slate-400">Last 20 windows</span>
+                  </div>
+                  <span className="px-2 py-1 bg-white/5 rounded text-[10px] text-slate-300 border border-white/10">Live</span>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.risk_trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="index" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} tickLine={false} />
+                      <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <RechartsTooltip 
+                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px border rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Area type="monotone" dataKey="risk_score" stroke="#8b5cf6" strokeWidth={3}
+                        fillOpacity={1} fill="url(#colorRisk)" activeDot={{ r: 6, strokeWidth: 0, fill: '#c084fc' }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </WidgetWrapper>
+          </div>
+        )}
+
+        {/* Allocation Donut Chart */}
+        {!hiddenWidgets.includes("allocation") && (
+          <div key="allocation">
+            <WidgetWrapper id="allocation" isEditMode={isEditMode} onRemove={removeWidget} title="Task Distribution" icon={Gauge}>
+              <div className="p-4 h-full flex flex-col">
+                <div className="mb-2">
+                  <h3 className="text-sm font-bold text-white">Task Distribution</h3>
+                  <p className="text-[10px] text-slate-400">Fog vs Cloud</p>
+                </div>
+                <div className="flex-1 min-h-0 relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <defs>
+                        <linearGradient id="fogGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={1}/>
+                          <stop offset="100%" stopColor="#34d399" stopOpacity={1}/>
+                        </linearGradient>
+                        <linearGradient id="cloudGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={1}/>
+                          <stop offset="100%" stopColor="#60a5fa" stopOpacity={1}/>
+                        </linearGradient>
+                        <linearGradient id="hybridGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f59e0b" stopOpacity={1}/>
+                          <stop offset="100%" stopColor="#fbbf24" stopOpacity={1}/>
+                        </linearGradient>
+                      </defs>
+                      <Pie data={allocationData} dataKey="value" cx="50%" cy="50%"
+                        innerRadius={40} outerRadius={65} paddingAngle={3} stroke="none">
+                        {allocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`url(${index === 0 ? '#fogGradient' : index === 1 ? '#cloudGradient' : '#hybridGradient'})`} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip 
+                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', backdropFilter: 'blur(8px)', fontSize: '12px' }}
+                        itemStyle={{ color: '#fff', fontSize: '12px' }}
+                      />
+                      <text x="50%" y="50%" textAnchor="middle" className="fill-white text-xl font-bold" style={{ fontSize: '20px' }}>
+                        {totalAllocations}
+                      </text>
+                      <text x="50%" y="60%" textAnchor="middle" className="fill-slate-400 text-[10px]" style={{ fontSize: '10px' }}>
+                        Tasks
+                      </text>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Legend */}
+                <div className="mt-2 space-y-1">
+                  {allocationData.map((item, index) => (
+                    <div key={item.name} className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${index === 0 ? 'bg-emerald-500' : index === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
+                        <span className="text-slate-300 text-[10px]">{item.name}</span>
+                      </div>
+                      <div className="text-xs font-semibold text-white">{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </WidgetWrapper>
+          </div>
+        )}
+
+        {/* Edge Node Telemetry */}
+        {!hiddenWidgets.includes("telemetry") && (
+          <div key="telemetry">
+            <WidgetWrapper id="telemetry" isEditMode={isEditMode} onRemove={removeWidget} title="Edge Telemetry" icon={HardDrive}>
+              <div className="p-3 h-full flex flex-col">
+                <div className="flex items-center gap-2 mb-3">
+                  <HardDrive size={18} className="text-indigo-400" />
+                  <h3 className="text-sm font-bold text-white">Edge Node Telemetry</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1 content-start">
+                  {[
+                    { title: "CPU Usage", value: `${data.system?.cpu || 0}%`, sub: "Fog node core utilization", icon: Cpu, color: "text-amber-400" },
+                    { title: "Memory Usage", value: `${data.system?.memory || 0}%`, sub: "Fog node RAM allocation", icon: HardDrive, color: "text-cyan-400" },
+                    { title: "Cloud Bytes", value: `${data.bandwidth?.cloud_bytes || 0} B`, sub: "Egress window volume", icon: Network, color: "text-indigo-400" },
+                    { title: "Fog Bytes", value: `${data.bandwidth?.fog_bytes || 0} B`, sub: "Ingress window volume", icon: Activity, color: "text-emerald-400" },
+                  ].map((m, i) => (
+                    <div key={i} className="glass-card p-3 relative overflow-hidden group border border-slate-700/50 hover:shadow-md transition-all">
+                      <div className={`absolute -right-3 -top-3 w-16 h-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${m.color.replace('text-', 'bg-')}`}></div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className={`p-1.5 rounded-md bg-gradient-to-br from-white/5 to-white/10 border border-white/10 ${m.color}`}>
+                          <m.icon size={14} strokeWidth={2} />
+                        </div>
+                        <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{m.title}</h4>
+                      </div>
+                      <h2 className="text-xl font-bold text-white mb-0 tracking-tight">{m.value}</h2>
+                      <p className="text-[9px] text-slate-500 flex items-center gap-0.5"><Clock size={8} />{m.sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </WidgetWrapper>
+          </div>
+        )}
+      </ResponsiveGridLayout>
     </div>
   );
 }

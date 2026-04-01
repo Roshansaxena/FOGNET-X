@@ -67,36 +67,36 @@ function DeviceCard({ device, onEdit, onDelete, onRefresh }) {
 
       {/* Device Info Grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-white/5 rounded-lg p-3">
+        <div className="bg-white/5 rounded-lg p-3 overflow-hidden">
           <div className="flex items-center gap-2 mb-1">
-            <Wifi size={14} className="text-slate-400" />
+            <Wifi size={14} className="text-slate-400 shrink-0" />
             <span className="text-xs text-slate-400">Signal</span>
           </div>
-          <div className="text-sm font-bold text-white">{device.signal_strength || -70} dBm</div>
+          <div className="text-sm font-bold text-white truncate">{parseFloat(device.signal_strength || -70).toFixed(1)} dBm</div>
         </div>
         
-        <div className="bg-white/5 rounded-lg p-3">
+        <div className="bg-white/5 rounded-lg p-3 overflow-hidden">
           <div className="flex items-center gap-2 mb-1">
-            <Battery size={14} className="text-slate-400" />
+            <Battery size={14} className="text-slate-400 shrink-0" />
             <span className="text-xs text-slate-400">Battery</span>
           </div>
-          <div className="text-sm font-bold text-white">{device.battery_level || 100}%</div>
+          <div className="text-sm font-bold text-white truncate">{parseFloat(device.battery_level || 100).toFixed(1)}%</div>
         </div>
         
-        <div className="bg-white/5 rounded-lg p-3">
+        <div className="bg-white/5 rounded-lg p-3 overflow-hidden">
           <div className="flex items-center gap-2 mb-1">
-            <Activity size={14} className="text-slate-400" />
+            <Activity size={14} className="text-slate-400 shrink-0" />
             <span className="text-xs text-slate-400">CPU</span>
           </div>
-          <div className="text-sm font-bold text-white">{device.cpu_usage || 0}%</div>
+          <div className="text-sm font-bold text-white truncate">{parseFloat(device.cpu_usage || 0).toFixed(1)}%</div>
         </div>
         
-        <div className="bg-white/5 rounded-lg p-3">
+        <div className="bg-white/5 rounded-lg p-3 overflow-hidden">
           <div className="flex items-center gap-2 mb-1">
-            <Server size={14} className="text-slate-400" />
+            <Server size={14} className="text-slate-400 shrink-0" />
             <span className="text-xs text-slate-400">Memory</span>
           </div>
-          <div className="text-sm font-bold text-white">{device.memory_usage || 0}%</div>
+          <div className="text-sm font-bold text-white truncate">{parseFloat(device.memory_usage || 0).toFixed(1)}%</div>
         </div>
       </div>
 
