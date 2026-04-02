@@ -6,7 +6,7 @@ import argparse
 from datetime import datetime
 
 # Configuration
-BROKER = "localhost"
+BROKER = "80.225.213.210"
 TOPIC = "fognetx/sensors"
 
 # Device profiles for realistic simulation

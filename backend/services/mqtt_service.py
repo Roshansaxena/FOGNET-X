@@ -5,6 +5,7 @@ import time
 import threading
 import traceback
 import psutil
+from datetime import datetime
 import paho.mqtt.client as mqtt
 from services.realtime import emit_metrics
 from services.alert_service import send_email_alert, send_telegram_alert
@@ -125,23 +126,96 @@ def extract_device_context(data: dict, device_id: str) -> DeviceContext:
     )
 
 
+def auto_register_device_in_db(device_id: str, data: dict):
+    """Automatically register device in database if not exists. Updates status if already exists."""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        
+        # Check if device exists
+        c.execute("SELECT device_id FROM devices WHERE device_id = ?", (device_id,))
+        row = c.fetchone()
+        
+        if not row:
+            # Extract device info from data or use defaults
+            device_name = f"IoT Sensor {device_id}"
+            device_type = "iot_sensor"
+            capabilities = '["temperature", "gas", "motion", "tank_level"]'
+            location = "Factory Floor"
+            
+            c.execute("""
+                INSERT INTO devices (
+                    device_id, device_name, device_type, capabilities,
+                    location, status, battery_level, signal_strength,
+                    cpu_usage, memory_usage, last_seen, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                device_id, device_name, device_type, capabilities,
+                location, "online", 
+                data.get('battery', 100.0),
+                data.get('rssi', data.get('signal_strength', -70.0)),
+                data.get('device_cpu', 0),
+                data.get('device_memory', 0),
+                datetime.utcnow().isoformat(),
+                datetime.utcnow().isoformat()
+            ))
+            conn.commit()
+            print(f"✅ Auto-registered device: {device_id}")
+        else:
+            # Check if device was offline before updating
+            c.execute("SELECT status FROM devices WHERE device_id = ?", (device_id,))
+            old_status = c.fetchone()[0]
+            
+            # Update existing device status and heartbeat
+            c.execute("""
+                UPDATE devices 
+                SET status = 'online', last_seen = ?, 
+                    battery_level = ?, signal_strength = ?
+                WHERE device_id = ?
+            """, (
+                datetime.utcnow().isoformat(),
+                data.get('battery', 100.0),
+                data.get('rssi', data.get('signal_strength', -70.0)),
+                device_id
+            ))
+            conn.commit()
+            
+            # Print reconnection message
+            if old_status == 'offline':
+                print(f"✅ Device {device_id} came back ONLINE")
+        
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ Device registration error: {e}")
+
+
 def on_message(client, userdata, msg):
     try:
         # Check topic to handle heartbeat specifically
         if msg.topic == HEARTBEAT_TOPIC:
-            registry.update_heartbeat("arduino_node_1")
+            # Auto-register device from heartbeat too (simpler approach)
+            device_id = "arduino_factory_01"  # Default device ID
+            auto_register_device_in_db(device_id, {})
+            registry.update_heartbeat(device_id)
             return
 
         data = json.loads(msg.payload.decode())
-        device_id = data.get("device_id", "arduino_node_1") # Fallback for Arduino
-        data["temperature"] = data.get("temperature", data.get("temp", 0)) # Normalize temp
-
+        device_id = data.get("device_id", "arduino_factory_01") 
+        
+        # Normalize Arduino-specific fields to FOGNET-X standards
+        if "temp" in data: data["temperature"] = data["temp"]
+        if "tank_dist" in data: data["tank_level"] = data["tank_dist"]
+        if "power" in data: data["power_consumption"] = data["power"]
+        
         # ------------------------------
         # DECISION TIMING
         # ------------------------------
 
         decision_start = time.perf_counter()
 
+        # Auto-register device in database (CRITICAL FIX!)
+        auto_register_device_in_db(device_id, data)
+        
         registry.register_device(device_id)
         registry.update_heartbeat(device_id)
         context_model.update(device_id, data)
