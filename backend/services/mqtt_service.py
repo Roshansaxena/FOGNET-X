@@ -60,6 +60,81 @@ FACTORY_VENT_TOPIC = "factory/actuator/vent"
 
 
 # =====================================================
+# DEVICE CONTROL & THRESHOLD PUBLISHING
+# =====================================================
+
+def publish_thresholds_to_device(device_id, thresholds):
+    """Send threshold configuration to a specific device via MQTT"""
+    try:
+        payload = json.dumps({
+            "device_id": device_id,
+            "command": "UPDATE_THRESHOLDS",
+            "thresholds": {
+                "temp_warning": thresholds.get('temp_warning', 35),
+                "temp_critical": thresholds.get('temp_critical', 45),
+                "temp_emergency": thresholds.get('temp_emergency', 55),
+                "gas_warning": thresholds.get('gas_warning', 400),
+                "gas_critical": thresholds.get('gas_critical', 700),
+                "gas_emergency": thresholds.get('gas_emergency', 900),
+                "humidity_warning": thresholds.get('humidity_warning', 80),
+                "humidity_critical": thresholds.get('humidity_critical', 90),
+                "tank_min": thresholds.get('tank_min', 10),
+                "tank_max": thresholds.get('tank_max', 100),
+                "pressure_warning": thresholds.get('pressure_warning', 1050),
+                "pressure_critical": thresholds.get('pressure_critical', 1100),
+                "timestamp": time.time()
+            }
+        })
+        
+        topic = f"factory/config/{device_id}/thresholds"
+        client.publish(topic, payload, qos=1)
+        print(f"📤 Thresholds sent to {device_id} via {topic}")
+        
+    except Exception as e:
+        print(f"❌ Failed to publish thresholds: {e}")
+        traceback.print_exc()
+
+
+def publish_actuator_command(device_id, actuator, action):
+    """Send actuator command to a specific device via MQTT"""
+    try:
+        # Map actuator to MQTT topic
+        mqtt_topics = {
+            'fan': 'factory/actuator/fan',
+            'vent': 'factory/actuator/vent',
+            'pump': 'factory/actuator/pump',
+            'alarm': 'factory/actuator/alarm',
+            'mode': 'factory/actuator/mode'
+        }
+        
+        topic = mqtt_topics.get(actuator, f"factory/actuator/{actuator}")
+        client.publish(topic, action, qos=1)
+        print(f"📤 Actuator command: {topic} -> {action}")
+        
+    except Exception as e:
+        print(f"❌ Failed to publish actuator command: {e}")
+        traceback.print_exc()
+
+
+def publish_all_thresholds():
+    """Send thresholds to all connected devices"""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
+        thresholds_list = conn.execute('SELECT * FROM device_thresholds').fetchall()
+        conn.close()
+        
+        for threshold in thresholds_list:
+            publish_thresholds_to_device(threshold['device_id'], dict(threshold))
+        
+        print(f"📤 Thresholds sent to {len(thresholds_list)} devices")
+        
+    except Exception as e:
+        print(f"❌ Failed to publish all thresholds: {e}")
+        traceback.print_exc()
+
+
+# =====================================================
 # CLOUD EXECUTION (ASYNC)
 # =====================================================
 
@@ -299,6 +374,11 @@ def on_message(client, userdata, msg):
             "fog_latency": fog_latency,
             "severity": severity
         })
+        
+        # Emit real-time sensor data for live dashboard updates
+        from services.realtime import emit_sensor_data
+        emit_sensor_data(data)
+        
         # ------------------------------
         # CRITICAL ALERT HANDLING
         # ------------------------------

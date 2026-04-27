@@ -42,9 +42,10 @@ export default function Orchestration() {
         sla_cloud_ms: state.sla_cloud_ms,
         cpu_threshold: state.cpu_threshold
       }, { headers });
-      alert("Configuration Updated");
+      alert("Configuration Updated Successfully!");
     } catch (err) {
       console.error("Failed to update config", err);
+      alert("Error updating configuration");
     }
   };
 
@@ -101,7 +102,7 @@ export default function Orchestration() {
           <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
             <Settings className="w-5 h-5 text-indigo-400" />
           </div>
-          <h2 className="text-xl font-semibold text-white">Configuration</h2>
+          <h2 className="text-xl font-semibold text-white">Core Configuration</h2>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -152,7 +153,7 @@ export default function Orchestration() {
           onClick={updateConfig}
           className="mt-6 px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors"
         >
-          Apply Changes
+          Apply Core Changes
         </button>
       </motion.div>
 

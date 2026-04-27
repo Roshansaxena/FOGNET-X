@@ -13,7 +13,7 @@ import time
 
 # Configuration
 MQTT_BROKER = "localhost"  # or your fog node IP
-DEVICE_ID = "arduino_factory_01"
+DEVICE_ID = "arduino_factory_02"
 
 def main():
     print("🤖 FOGNET-X MQTT Device Simulator")

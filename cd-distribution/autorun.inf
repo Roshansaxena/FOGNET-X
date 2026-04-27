@@ -1,0 +1,30 @@
+[AutoRun]
+open=setup-windows.bat
+icon=icon.ico
+label=FOGNET-X Fog Computing Platform
+action=Install FOGNET-X
+
+[Content]
+Title=FOGNET-X Complete Distribution
+Description=Fog Computing Platform for IoT - Real-time Monitoring & ML
+Version=1.0.0
+
+[Install]
+Windows=setup-windows.bat
+Linux=setup-linux.sh
+Docker=docker-compose.yml
+
+[Documentation]
+QuickStart=README-CD.txt
+FullGuide=INSTALLATION.md
+Troubleshooting=TROUBLESHOOTING.md
+
+[Requirements]
+Windows=Python 3.9+ OR Docker Desktop
+Linux=Python 3.9+ OR Docker
+MacOS=Python 3.9+ OR Docker
+
+[Links]
+Website=https://fognetx.com
+Support=https://github.com/fognetx/support
+Documentation=./INSTALLATION.md

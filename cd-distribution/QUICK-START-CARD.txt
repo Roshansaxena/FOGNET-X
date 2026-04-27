@@ -1,0 +1,97 @@
+================================================================================
+   FOGNET-X - Quick Start Card
+   Fog Computing Platform for IoT
+================================================================================
+
+WHAT'S ON THIS CD/DVD:
+----------------------
+✓ Complete FOGNET-X application
+✓ Backend server (Python FastAPI + Flask)
+✓ Frontend dashboard (React + WebSocket)
+✓ Docker configuration
+✓ Device firmware (Arduino/ESP32)
+✓ Setup scripts for Windows & Linux
+
+SYSTEM REQUIREMENTS:
+--------------------
+Minimum:
+  • CPU: Dual-core
+  • RAM: 2GB
+  • Storage: 1GB free
+  • OS: Windows 10/11, Ubuntu 20+, macOS 11+
+
+Option A: Python 3.9+ and Node.js 18+
+Option B: Docker Desktop (easiest)
+
+INSTALL IN 3 STEPS:
+-------------------
+
+OPTION 1: DOCKER (Recommended - 2 minutes)
+  1. Open terminal in this CD/folder
+  2. Run: docker-compose up -d
+  3. Open: http://localhost:3000
+
+OPTION 2: WINDOWS (5-10 minutes)
+  1. Double-click: setup-windows.bat
+  2. Wait for installation
+  3. Browser opens automatically
+
+OPTION 3: LINUX/MAC (5-10 minutes)
+  1. Open terminal
+  2. Run: chmod +x setup-linux.sh && ./setup-linux.sh
+  3. Open: http://localhost:3000
+
+LOGIN CREDENTIALS:
+------------------
+Username: admin
+Password: admin123
+
+WHAT YOU CAN DO:
+----------------
+✓ Monitor IoT devices in real-time
+✓ View sensor data (temperature, gas, humidity)
+✓ Manage fog-cloud execution
+✓ ML-powered decisions
+✓ Set up alerts & notifications
+✓ Simulate devices for testing
+
+QUICK COMMANDS:
+---------------
+Start (Docker):    docker-compose up -d
+Stop (Docker):     docker-compose down
+Start Simulator:   python simulate_devices.py
+View Logs:         docker-compose logs -f
+API Docs:          http://localhost:8000/docs
+
+TROUBLESHOOTING:
+----------------
+• Port in use? → Change ports in docker-compose.yml
+• Can't login? → Run: python create_admin.py
+• Database error? → Delete fognetx.db and run migrate.py
+• Need help? → See TROUBLESHOOTING.md on this CD
+
+FOLDER STRUCTURE:
+-----------------
+backend/          - Python server & ML models
+frontend/         - React dashboard
+docs/             - Documentation & guides
+scripts/          - Utility scripts
+firmware/         - Arduino/ESP32 code
+setup-*.bat/sh    - Installation scripts
+
+VERSION INFO:
+-------------
+Version: 1.0.0
+Build Date: 2026-04-03
+License: MIT
+
+SUPPORT:
+--------
+• Email: support@fognetx.com
+• GitHub: https://github.com/fognetx/support
+• Documentation: See INSTALLATION.md on this CD
+
+================================================================================
+   Insert CD → Run Setup → Start Monitoring!
+   http://localhost:3000
+================================================================================

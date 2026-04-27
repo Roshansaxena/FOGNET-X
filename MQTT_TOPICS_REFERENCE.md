@@ -1,6 +1,6 @@
 # 📡 FOGNET-X MQTT Topic Reference
 
-Complete list of MQTT topics for ESP8266 sensors and actuators.
+Complete list of MQTT topics for ESP devices, sensors, actuators, and threshold configuration.
 
 ---
 
@@ -14,16 +14,14 @@ Complete list of MQTT topics for ESP8266 sensors and actuators.
 ```json
 {
   "device_id": "arduino_factory_01",
-  "temp": 28.5,
+  "temperature": 28.5,
   "humidity": 62.0,
   "gas": 245,
-  "gas_alert": 0,
   "motion": 0,
-  "tank_dist": 15.2,
-  "tank_overflow": 0,
+  "tank_level": 15.2,
+  "pressure": 1013.25,
   "fan_status": 0,
   "vent_position": 0,
-  "auto_mode": 1,
   "rssi": -65,
   "uptime": 3600
 }
@@ -31,16 +29,14 @@ Complete list of MQTT topics for ESP8266 sensors and actuators.
 
 **Field Descriptions:**
 - `device_id`: Unique device identifier (REQUIRED)
-- `temp`: Temperature in Celsius
+- `temperature`: Temperature in Celsius
 - `humidity`: Relative humidity percentage
-- `gas`: MQ-2 gas sensor reading (0-1023)
-- `gas_alert`: 1 if gas > threshold, else 0
+- `gas`: MQ-2 gas sensor reading (PPM)
 - `motion`: PIR motion detected (0 or 1)
-- `tank_dist`: Ultrasonic distance in cm
-- `tank_overflow`: 1 if tank level critical
+- `tank_level`: Tank level/distance in cm
+- `pressure`: Atmospheric pressure in hPa
 - `fan_status`: Current fan state (0=OFF, 1=ON)
 - `vent_position`: Servo angle (0=closed, 90=open)
-- `auto_mode`: Automation mode (1=AUTO, 0=MANUAL)
 - `rssi`: WiFi signal strength (dBm)
 - `uptime`: Seconds since boot
 
@@ -94,6 +90,30 @@ mosquitto_pub -h localhost -t "factory/actuator/vent" -m "OPEN"
 
 ---
 
+### Pump Control
+**Topic:** `factory/actuator/pump`  
+**Direction:** Fog → Device  
+**Payload:** `"ON"` or `"OFF"`
+
+**Example:**
+```bash
+mosquitto_pub -h localhost -t "factory/actuator/pump" -m "ON"
+```
+
+---
+
+### Alarm Control
+**Topic:** `factory/actuator/alarm`  
+**Direction:** Fog → Device  
+**Payload:** `"ON"` or `"OFF"`
+
+**Example:**
+```bash
+mosquitto_pub -h localhost -t "factory/actuator/alarm" -m "ON"
+```
+
+---
+
 ### Mode Selection
 **Topic:** `factory/actuator/mode`  
 **Direction:** Fog → Device  
@@ -118,6 +138,62 @@ mosquitto_pub -h localhost -t "factory/actuator/mode" -m "MANUAL"
 **Usage in Code:**
 ```cpp
 client.subscribe("factory/actuator/#");
+```
+
+---
+
+## ⚙️ Threshold Configuration (NEW!)
+
+### Update Device Thresholds
+**Topic:** `factory/config/{device_id}/thresholds`  
+**Direction:** Fog → Device  
+**Payload:** JSON
+
+**Example Payload:**
+```json
+{
+  "device_id": "esp8266_01",
+  "command": "UPDATE_THRESHOLDS",
+  "thresholds": {
+    "temp_warning": 35.0,
+    "temp_critical": 45.0,
+    "temp_emergency": 55.0,
+    "gas_warning": 400.0,
+    "gas_critical": 700.0,
+    "gas_emergency": 900.0,
+    "humidity_warning": 80.0,
+    "humidity_critical": 90.0,
+    "tank_min": 10.0,
+    "tank_max": 100.0,
+    "pressure_warning": 1050.0,
+    "pressure_critical": 1100.0,
+    "timestamp": 1234567890.123
+  }
+}
+```
+
+**Usage:**
+- Sent automatically when user saves thresholds from dashboard
+- Device should parse JSON and update local threshold variables
+- Enables software-based threshold management (no hardcoded values!)
+
+**Arduino Example:**
+```cpp
+void callback(char* topic, byte* payload, unsigned int length) {
+  String topicStr = String(topic);
+  
+  if (topicStr.endsWith("/thresholds")) {
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, payload, length);
+    
+    if (doc["command"] == "UPDATE_THRESHOLDS") {
+      temp_warning = doc["thresholds"]["temp_warning"];
+      temp_critical = doc["thresholds"]["temp_critical"];
+      // ... update other thresholds
+      Serial.println("Thresholds updated from dashboard!");
+    }
+  }
+}
 ```
 
 ---

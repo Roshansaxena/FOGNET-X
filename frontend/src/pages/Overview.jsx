@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { fetchDashboard } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
+import { io } from "socket.io-client";
 import {
   LineChart,
   Line,
@@ -238,6 +239,72 @@ export default function Overview() {
     } catch { return DEFAULT_LAYOUTS; }
   });
   const [showWidgetPanel, setShowWidgetPanel] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const [liveMode, setLiveMode] = useState(true); // true = WebSocket live mode, false = Polling mode
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [selectedDeviceId, setSelectedDeviceId] = useState('all'); // Filter by device: 'all' or specific device_id
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const socketInstance = io("http://localhost:8000", {
+      transports: ["websocket", "polling"]
+    });
+
+    socketInstance.on("connect", () => {
+      console.log("✅ WebSocket connected!");
+      setConnectionStatus('connected');
+    });
+
+    socketInstance.on("disconnect", () => {
+      console.log("❌ WebSocket disconnected");
+      setConnectionStatus('disconnected');
+    });
+
+    socketInstance.on("sensor_data", (data) => {
+      if (liveMode) {
+        // Filter by selected device
+        if (selectedDeviceId !== 'all' && data.device_id !== selectedDeviceId) {
+          return; // Skip updates from other devices
+        }
+        
+        console.log("🔴 Live sensor data:", data);
+        setData(prev => {
+          // Check if values actually changed
+          const prevDevice = prev.devices?.find(d => d.device_id === data.device_id);
+          const hasChanges = !prevDevice || 
+            Math.abs((prevDevice.temperature || 0) - (data.temperature || 0)) > 0.1 ||
+            Math.abs((prevDevice.gas || 0) - (data.gas || 0)) > 5 ||
+            Math.abs((prevDevice.humidity || 0) - (data.humidity || 0)) > 1;
+          
+          if (!hasChanges) {
+            return prev; // Skip update if no significant change
+          }
+          
+          return {
+            ...prev,
+            devices: prev.devices?.map(device => 
+              device.device_id === data.device_id 
+                ? { ...device, ...data }
+                : device
+            ) || [data]
+          };
+        });
+        setLastUpdate(new Date());
+      }
+    });
+
+    socketInstance.on("metrics_event", (data) => {
+      console.log("📊 Metrics update:", data);
+    });
+
+    setSocket(socketInstance);
+
+    return () => {
+      socketInstance.disconnect();
+      console.log("WebSocket disconnected");
+      setConnectionStatus('disconnected');
+    };
+  }, [liveMode]);
 
   useEffect(() => {
     const load = () => {
@@ -254,9 +321,13 @@ export default function Overview() {
     };
 
     load(); 
-    const interval = setInterval(load, 3000);
+    
+    // Polling interval based on mode
+    const pollInterval = liveMode ? 10000 : 3000; // 10s in live mode, 3s in polling mode
+    const interval = setInterval(load, pollInterval);
+    
     return () => clearInterval(interval); 
-  }, []);
+  }, [liveMode]);
 
   const onLayoutChange = useCallback((currentLayout, allLayouts) => {
     setLayouts(allLayouts);
@@ -337,10 +408,71 @@ export default function Overview() {
             <LayoutDashboard size={20} className="text-indigo-400" />
             <h1 className="text-lg font-bold text-white">Dashboard</h1>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wide">Live</span>
+          
+          {/* Live Mode Toggle Switch */}
+          <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg p-1">
+            <button
+              onClick={() => setLiveMode(false)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                !liveMode 
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Polling Mode - Refresh every 3 seconds"
+            >
+              📡 POLLING
+            </button>
+            <button
+              onClick={() => setLiveMode(true)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                liveMode 
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Live Mode - Real-time WebSocket updates"
+            >
+              ⚡ LIVE
+              {connectionStatus === 'connected' && (
+                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+              )}
+            </button>
           </div>
+          
+          {/* Connection Status Indicator */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            connectionStatus === 'connected' && liveMode
+              ? 'bg-emerald-500/10 border-emerald-500/20' 
+              : 'bg-slate-500/10 border-slate-500/20'
+          }`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              connectionStatus === 'connected' && liveMode
+                ? 'bg-emerald-400 animate-pulse' 
+                : 'bg-slate-400'
+            }`}></div>
+            <span className={`text-[10px] font-semibold uppercase tracking-wide ${
+              connectionStatus === 'connected' && liveMode
+                ? 'text-emerald-400' 
+                : 'text-slate-400'
+            }`}>
+              {liveMode ? (connectionStatus === 'connected' ? 'CONNECTED' : 'DISCONNECTED') : 'POLLING'}
+            </span>
+          </div>
+          
+          {/* Device Filter Dropdown */}
+          <select
+            value={selectedDeviceId}
+            onChange={(e) => setSelectedDeviceId(e.target.value)}
+            className="px-3 py-1.5 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-xs font-medium focus:border-indigo-500 focus:outline-none cursor-pointer hover:bg-slate-800 transition-colors min-w-[180px]"
+            title="Filter by device to show all its sensors"
+          >
+            <option value="all">All Devices</option>
+            {data?.devices?.map(device => (
+              <option key={device.device_id} value={device.device_id}>
+                📱 {device.device_name || device.device_id}
+              </option>
+            ))}
+          </select>
+          
           <span className="text-xs text-slate-500 font-mono">{lastUpdate.toLocaleTimeString()}</span>
         </div>
 

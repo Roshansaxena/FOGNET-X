@@ -1,0 +1,10 @@
+2026-04-03 01:26:41.175 +05:30 [FTL] Application terminated unexpectedly
+System.InvalidOperationException: No service for type 'Microsoft.Extensions.Logging.ILogger`1[FOGNETX.Manager.Program]' has been registered.
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at FOGNETX.Manager.Program.Main() in E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.Manager\Program.cs:line 28
+2026-04-03 01:27:41.072 +05:30 [FTL] Application terminated unexpectedly
+System.InvalidOperationException: No service for type 'Microsoft.Extensions.Logging.ILogger`1[FOGNETX.Manager.Program]' has been registered.
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at FOGNETX.Manager.Program.Main() in E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.Manager\Program.cs:line 28

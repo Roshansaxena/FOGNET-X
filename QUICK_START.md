@@ -1,46 +1,74 @@
 # 🚀 FOGNET-X Quick Start Guide
 
-## Get Your ESP8266 Node Running in 5 Minutes!
+## Get Started with FOGNET-X in Minutes!
 
 ---
 
-## ⚡ Ultra-Fast Setup
+## ⚡ Quick Setup (Backend + Frontend)
 
-### Step 1: Hardware Assembly (2 minutes)
+### Step 1: Start Backend (1 minute)
 
-Connect these components to your ESP8266:
-
-```
-ESP8266 → Components
--------   ----------
-D2    →   DHT11 DATA pin
-A0    →   MQ-2 Gas OUT
-D5    →   PIR OUT
-D6    →   Ultrasonic TRIG
-D7    →   Ultrasonic ECHO
-D1    →   Relay IN
-D4    →   Servo Signal
-3.3V  →   VCC (all sensors)
-GND   →   GND (all components)
+```bash
+cd backend
+python cloud_server.py
 ```
 
-### Step 2: Software Configuration (1 minute)
+Backend will start on **http://localhost:8000**
 
-1. Open `firmware/esp8266_factory_node.ino` in Arduino IDE
-2. Update WiFi credentials:
-   ```cpp
-   const char* ssid = "YOUR_WIFI";
-   const char* password = "YOUR_PASSWORD";
-   const char* mqtt_server = "10.136.75.54";  // Your fog node IP
+### Step 2: Start Frontend (1 minute)
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend will start on **http://localhost:3000**
+
+### Step 3: Access Dashboard
+
+Open **http://localhost:3000** and login:
+- **Username:** admin
+- **Password:** admin123
+
+---
+
+## 🎯 Key Features
+
+### 1. **Real-time Dashboard**
+- Live sensor data via WebSockets
+- Device filtering
+- Latency tracking
+
+### 2. **Orchestration**
+- Fog/Cloud decision engine
+- SLA monitoring
+- Risk-based allocation
+
+---
+
+## 🔌 Connect ESP Devices
+
+### Option A: With Hardware (ESP8266/ESP32)
+
+1. **Flash firmware:**
+   ```
+   Open firmware/esp8266_complete_node.ino in Arduino IDE
+   Update WiFi credentials
+   Upload to device
    ```
 
-### Step 3: Upload & Run (2 minutes)
+2. **Device auto-registers** when it connects to MQTT
 
-1. Upload code to ESP8266 (Ctrl+U)
-2. Open Serial Monitor (115200 baud)
-3. Watch it connect automatically!
+3. **View in dashboard:** Go to `/devices`
 
-**That's it!** No manual registration needed! ✅
+### Option B: Without Hardware (Simulator)
+
+```bash
+cd scripts/archive
+python simulate_devices.py
+```
+
+This simulates multiple IoT devices sending sensor data.
 
 ---
 
@@ -54,37 +82,20 @@ GND   →   GND (all components)
 ✅ Data published successfully
 ```
 
-### Check Fog Logs:
+### Check Backend Logs:
 ```bash
-docker logs -f fognetx-fogcore
-```
-
-Look for:
-```
-✅ Auto-registered device: arduino_factory_01
-Temp: 28.5 | Gas: 245 | Tank: 15.2
+# Backend terminal should show:
+✅ FOGNET-X Fog Core Booting...
+📡 Subscribed to sensors and factory topics
+✅ FOGNET-X Fog Core Running...
 ```
 
 ### Open Dashboard:
-http://localhost:8000/dashboard
+http://localhost:3000
 
-You should see live data updating every 2 seconds!
-
----
-
-## 🎮 Test Actuators
-
-From command line:
-
-```bash
-# Turn on fan
-mosquitto_pub -h localhost -t "factory/actuator/fan" -m "ON"
-
-# Open vent
-mosquitto_pub -h localhost -t "factory/actuator/vent" -m "OPEN"
-
-# You should hear relay click and servo move!
-```
+You should see:
+- Device list in Overview
+- Real-time sensor data updating
 
 ---
 
@@ -92,17 +103,24 @@ mosquitto_pub -h localhost -t "factory/actuator/vent" -m "OPEN"
 
 ```
 FOGNET-X/
-├── firmware/
-│   └── esp8266_factory_node.ino    ← Upload this to ESP8266
-├── backend/
-│   └── services/
-│       └── mqtt_service.py          ← Fog auto-registration logic
-├── test_mqtt_device.py              ← Python simulator
-├── check_devices.py                 ← View registered devices
-├── DEPLOYMENT_GUIDE.md              ← Detailed deployment guide
-├── MQTT_TOPICS_REFERENCE.md         ← All MQTT topics explained
-└── QUICK_START.md                   ← This file
+├── backend/                    # Python Flask backend
+│   ├── cloud_server.py        # ⭐ Main application
+│   ├── routes/                # API endpoints
+│   ├── services/              # Business logic
+│   └── migrations/            # Database migrations
+├── frontend/                   # React frontend
+│   └── src/pages/             # Dashboard pages
+│       ├── DeviceControl.jsx  # Threshold & actuator UI
+│       └── Overview.jsx       # Main dashboard
+├── firmware/                   # Arduino firmware
+│   └── esp8266_*.ino          # ESP device code
+├── docs/                       # Documentation
+├── scripts/                    # Utility scripts
+├── dotnet/                     # .NET applications
+└── docker-compose.yml          # Docker setup
 ```
+
+**Full reference:** [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
 
 ---
 
@@ -127,9 +145,9 @@ FOGNET-X/
 
 ## 📖 More Documentation
 
-- **Complete Deployment**: [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md)
+- **Project Structure**: [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)
+- **Deployment Guide**: [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md)
 - **MQTT Topics**: [`MQTT_TOPICS_REFERENCE.md`](MQTT_TOPICS_REFERENCE.md)
-- **Auto-Registration**: [`AUTO_REGISTRATION_GUIDE.md`](AUTO_REGISTRATION_GUIDE.md)
 
 ---
 
@@ -141,7 +159,7 @@ FOGNET-X/
 4. ✅ Device auto-registers in database
 5. ✅ Sensor data starts flowing
 6. ✅ Dashboard shows live updates
-7. ✅ Actuators respond to commands
+7. ✅ Actuators respond to MQTT commands
 
 **Zero manual setup required!** Just power it up and go! 🚀
 
@@ -166,7 +184,9 @@ Each will auto-register separately!
 
 ### Monitor All Devices:
 ```bash
-python check_devices.py
+# From dashboard - go to Devices page
+# Or use API:
+curl http://localhost:8000/api/devices
 ```
 
 Shows all registered devices and their status.
@@ -181,7 +201,7 @@ Shows all registered devices and their status.
 - [ ] Fog node IP set
 - [ ] Serial shows successful connection
 - [ ] Dashboard displays sensor data
-- [ ] Actuators respond to commands
+- [ ] Actuators respond to MQTT commands
 
 **All checked?** Congratulations! Your industrial IoT node is production-ready! 🏆
 
@@ -189,7 +209,8 @@ Shows all registered devices and their status.
 
 **Questions?** Check the detailed guides or run the Python simulator:
 ```bash
-python test_mqtt_device.py
+cd scripts/archive
+python simulate_devices.py
 ```
 
-This simulates an ESP8266 without needing hardware!
+This simulates IoT devices without needing hardware!

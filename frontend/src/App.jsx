@@ -14,6 +14,8 @@ import OAuthSuccess from "./pages/OAuthSuccess";
 import LiveExecution from "./pages/LiveExecution";
 import Register from "./pages/Register";
 import Landing from "./pages/Landing";
+// Device Control - Hidden (Future Update)
+// import DeviceControl from "./pages/DeviceControl";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -46,6 +48,8 @@ function App() {
         <Route path="/devices" element={<Devices />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/live" element={<LiveExecution />} />
+        {/* Device Control route - Hidden (Future Update) */}
+        {/* <Route path="/control" element={<DeviceControl />} /> */}
       </Route>
 
     </Routes>

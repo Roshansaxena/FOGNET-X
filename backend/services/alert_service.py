@@ -4,23 +4,46 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ==============================
-# CONFIG (MOVE TO ENV LATER)
+# CONFIG (FROM ENVIRONMENT)
 # ==============================
 
-EMAIL_SENDER = "info.roshansaxena@gmail.com"
-EMAIL_PASSWORD = "ozaxwnznmzurusmd"
-EMAIL_RECEIVER = "roshansaxena33@gmail.com"
+# Email Configuration
+EMAIL_SENDER = os.getenv("EMAIL_SENDER", "")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
+EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER", "")
+EMAIL_SMTP_SERVER = os.getenv("EMAIL_SMTP_SERVER", "smtp.gmail.com")
+EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "465"))
 
-TELEGRAM_TOKEN = "8613306034:AAGN81_fj5Q_FHN1OkqB09Ix9shYOEbLGQo"
-TELEGRAM_CHAT_ID = "1627319774"
+# Telegram Configuration
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+# Alert Settings
+ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "300"))
+ENABLE_EMAIL_ALERTS = os.getenv("ENABLE_EMAIL_ALERTS", "true").lower() == "true"
+ENABLE_TELEGRAM_ALERTS = os.getenv("ENABLE_TELEGRAM_ALERTS", "true").lower() == "true"
 
 # ==============================
 # EMAIL ALERT
 # ==============================
 
 def send_email_alert(device_id, risk, temperature, gas, extra_data=None):
+    """Send email alert if enabled and configured"""
+    # Check if email alerts are enabled
+    if not ENABLE_EMAIL_ALERTS:
+        return
+    
+    # Check if email is configured
+    if not EMAIL_SENDER or not EMAIL_PASSWORD or not EMAIL_RECEIVER:
+        print("⚠️  Email alerts not configured (check backend/.env)")
+        return
+    
     try:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -79,7 +102,7 @@ https://github.com/Roshansaxena/FOGNET-X
 
         msg.attach(MIMEText(body, "plain"))
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
             server.send_message(msg)
 
@@ -93,6 +116,16 @@ https://github.com/Roshansaxena/FOGNET-X
 # ==============================
 
 def send_telegram_alert(device_id, risk, temperature, gas, extra_data=None):
+    """Send Telegram alert if enabled and configured"""
+    # Check if Telegram alerts are enabled
+    if not ENABLE_TELEGRAM_ALERTS:
+        return
+    
+    # Check if Telegram is configured
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print("⚠️  Telegram alerts not configured (check backend/.env)")
+        return
+    
     try:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         

@@ -1,0 +1,81 @@
+# Files to exclude from CD distribution
+# This keeps the CD size minimal
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Node modules (will be installed by user)
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+logs/*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database (user creates fresh)
+*.db
+fognetx.db
+
+# Docker (not needed on CD)
+.dockerignore
+docker-compose.yml.backup
+
+# Documentation (keep only essential)
+docs/archive/
+docs/*.png
+docs/*.jpg
+
+# Experiments
+experiments/
+_archive/
+
+# CD distribution itself (avoid recursion)
+cd-distribution/
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml

@@ -16,6 +16,7 @@ from flask_socketio import SocketIO
 from core.config import DB_NAME
 from dotenv import load_dotenv
 from migrate import ensure_extended_schema
+from routes.thresholds import thresholds_bp
 import os
 load_dotenv()
 import sqlite3
@@ -41,6 +42,9 @@ init_socketio(socketio)
 init_db()
 ensure_extended_schema()  # Ensure all tables and columns exist on every startup
 config = OrchestrationConfig()
+
+# Register threshold & actuator control routes
+app.register_blueprint(thresholds_bp)
 import os
 
 #app.config["SERVER_NAME"] = os.getenv("SERVER_NAME")

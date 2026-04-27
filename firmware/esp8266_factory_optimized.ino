@@ -65,8 +65,8 @@ const float TEMP_HIGH = 40.0;
 const float TEMP_CRITICAL = 50.0;
 const float TANK_LOW_CM = 10.0;
 
-// Publishing interval
-const unsigned long PUBLISH_INTERVAL = 2000;  // 2 seconds
+// Publishing interval - REDUCED for faster response!
+const unsigned long PUBLISH_INTERVAL = 500;  // 500ms (was 2000ms)
 
 // ==================== GLOBAL OBJECTS ====================
 WiFiClient espClient;
@@ -93,6 +93,7 @@ float temperature = 25.0;
 float humidity = 50.0;
 int gasValue = 0;
 int motionDetected = 0;
+int lastMotionState = 0;  // Track previous state for edge detection
 float tankDistance = 0.0;
 
 // ==================== FUNCTION DECLARATIONS ====================
@@ -346,7 +347,18 @@ void read_sensors() {
   gasValue = analogRead(MQ2_PIN);
   
   // Motion sensor
-  motionDetected = digitalRead(PIR_PIN);
+  int newMotion = digitalRead(PIR_PIN);
+  motionDetected = newMotion;
+  
+  // Detect motion CHANGE (edge detection) for instant alerts
+  bool motionChanged = (newMotion != lastMotionState);
+  if (motionChanged && newMotion == HIGH) {
+    Serial.println("🚨 MOTION DETECTED - Publishing immediately!");
+    read_sensors();
+    publish_data();
+    update_leds();
+  }
+  lastMotionState = newMotion;
   
   // Ultrasonic (tank level)
   tankDistance = readUltrasonic();

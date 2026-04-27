@@ -1,0 +1,6 @@
+E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.CLI\obj\Release\net8.0\FogNetX.CLI.csproj.AssemblyReference.cache
+E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.CLI\obj\Release\net8.0\FogNetX.CLI.GeneratedMSBuildEditorConfig.editorconfig
+E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.CLI\obj\Release\net8.0\FogNetX.CLI.AssemblyInfoInputs.cache
+E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.CLI\obj\Release\net8.0\FogNetX.CLI.AssemblyInfo.cs
+E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.CLI\obj\Release\net8.0\FogNetX.CLI.csproj.CoreCompileInputs.cache
+E:\FOGNET-X_Repo\FOGNET-X\packaging\dotnet\FogNetX.CLI\obj\Release\net8.0\FogNetX.CLI.sourcelink.json

@@ -1,12 +1,89 @@
-# 🏭 FOGNET-X ESP8266 Production Deployment Guide
+# 🏭 FOGNET-X Deployment Guide
 
-## Complete Implementation for Sensors & Actuators
+## Complete System Deployment
 
-This guide shows you how to deploy ESP8266 nodes with sensors and actuators that auto-register with your FOGNET-X fog node.
+This guide covers deploying the complete FOGNET-X system including backend, frontend, and ESP devices.
 
 ---
 
-## 📦 Hardware Requirements
+## 📦 System Architecture
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+│   ESP32/    │ MQTT │   Backend    │ HTTP  │  Frontend   │
+│  ESP8266    │─────▶│  (Flask)     │─────▶│  (React)    │
+│  Devices    │◀─────│  Port 8000   │       │  Port 3000  │
+└─────────────┘      └──────────────┘       └─────────────┘
+      │                      │
+      │                      ▼
+      │               ┌──────────────┐
+      └──────────────▶│   MQTT       │
+                      │   Broker     │
+                      │   Port 1883  │
+                      └──────────────┘
+```
+
+---
+
+## 🚀 Quick Deployment
+
+## 💻 Backend Deployment
+
+### Option 1: Local Deployment
+
+```bash
+# 1. Navigate to backend
+cd backend
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# 4. Run database migrations
+python run_migration_005.py
+
+# 5. Start backend
+python cloud_server.py
+```
+
+Backend runs on **http://localhost:8000**
+
+### Option 2: Docker Deployment
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Check status
+docker-compose ps
+```
+
+---
+
+## 🌐 Frontend Deployment
+
+```bash
+# 1. Navigate to frontend
+cd frontend
+
+# 2. Install dependencies
+npm install
+
+# 3. Start development server
+npm run dev
+
+# OR build for production
+npm run build
+```
+
+Frontend runs on **http://localhost:3000**
+
+---
+
+## 🔌 ESP Device Deployment
 
 ### ESP8266 Node Components:
 
@@ -136,13 +213,12 @@ Temp: 28.5 | Gas: 245 | Tank: 15.2
 
 ### Dashboard:
 
-Open http://localhost:8000/dashboard
+Open **http://localhost:3000** and login (admin/admin123)
 
 You should see:
-- Temperature updating every 2 seconds
-- Gas level readings
-- Risk score charts
-- Device status: Online
+- **Overview:** Real-time sensor data with WebSocket updates
+- **Devices:** List of all connected devices
+- **Orchestration:** Fog/Cloud decision settings
 
 ---
 
